@@ -1,3 +1,4 @@
+#define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -9,6 +10,7 @@
 #include "esp_mac.h"
 #include "nvs.h"
 //#include "mdns.h"
+#include "board_config.h"
 
 #include "wifi.h"
 
@@ -98,9 +100,18 @@ static void ap_set_config(void)
             .authmode = WIFI_AUTH_OPEN
         }
     };
-    uint8_t mac[6];
-    esp_wifi_get_mac(ESP_IF_WIFI_AP, mac);
-    sprintf((char*)wifi_ap_config.ap.ssid, AP_SSID, mac[3], mac[4], mac[5]);
+    if (*board_config.wifi_ap_ssid) {
+        strcpy((char*)wifi_ap_config.ap.ssid, board_config.wifi_ap_ssid);
+    } else {
+        // Use default AP name and no auth
+        uint8_t mac[6];
+        esp_wifi_get_mac(ESP_IF_WIFI_AP, mac);
+        sprintf((char*)wifi_ap_config.ap.ssid, AP_SSID, mac[3], mac[4], mac[5]);
+    }
+    if (*board_config.wifi_ap_pass) {
+        strcpy((char*)wifi_ap_config.ap.password, board_config.wifi_ap_pass);
+        wifi_ap_config.ap.authmode = WIFI_AUTH_WPA2_PSK;
+    }
 
     wifi_config_t wifi_sta_config = { 0 };
 
@@ -116,6 +127,8 @@ static void sta_try_start(void)
         ESP_LOGI(TAG, "Starting STA");
         esp_wifi_start();
         xEventGroupSetBits(wifi_event_group, WIFI_STA_MODE_BIT);
+    } else if (board_config.wifi_ap_autostart) {
+        wifi_ap_start();
     }
 }
 

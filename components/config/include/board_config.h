@@ -131,6 +131,10 @@ typedef struct
     bool onewire : 1;
     gpio_num_t onewire_gpio;
     bool onewire_temp_sensor : 1;
+
+    bool wifi_ap_autostart: 1;
+    char wifi_ap_ssid[32];
+    char wifi_ap_pass[64];
 } board_config_t;
 
 extern board_config_t board_config;
