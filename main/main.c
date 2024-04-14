@@ -51,6 +51,7 @@ static void reset_and_reboot(void)
 static void wifi_event_task_func(void* param)
 {
     EventBits_t mode_bits;
+    TickType_t const wait_sta = board_config.wifi_ap_autostart ? pdMS_TO_TICKS(10000) : portMAX_DELAY;
 
     while (true) {
         led_set_off(LED_ID_WIFI);
@@ -70,10 +71,13 @@ static void wifi_event_task_func(void* param)
         } else if (mode_bits & WIFI_STA_MODE_BIT) {
             led_set_state(LED_ID_WIFI, 500, 500);
 
-            if (xEventGroupWaitBits(wifi_event_group, WIFI_STA_CONNECTED_BIT | WIFI_AP_MODE_BIT, pdFALSE, pdFALSE, portMAX_DELAY) & WIFI_STA_CONNECTED_BIT) {
+            if (xEventGroupWaitBits(wifi_event_group, WIFI_STA_CONNECTED_BIT | WIFI_AP_MODE_BIT, pdFALSE, pdFALSE, wait_sta) & WIFI_STA_CONNECTED_BIT) {
                 led_set_on(LED_ID_WIFI);
                 do {
                 } while (!(xEventGroupWaitBits(wifi_event_group, WIFI_STA_DISCONNECTED_BIT | WIFI_AP_MODE_BIT, pdFALSE, pdFALSE, portMAX_DELAY) & WIFI_STA_DISCONNECTED_BIT));
+            } else {
+                // No STA found... start AP
+                wifi_ap_start();
             }
         }
     }

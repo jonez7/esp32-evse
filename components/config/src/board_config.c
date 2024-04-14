@@ -177,6 +177,10 @@ void board_config_load()
                     SET_CONFIG_VALUE("ONEWIRE_GPIO", onewire_gpio, atoi);
                     SET_CONFIG_VALUE("ONEWIRE_TEMP_SENSOR", onewire_temp_sensor, atob);
 
+                    SET_CONFIG_VALUE("WIFI_AP_AUTOSTART", wifi_ap_autostart, atob);
+                    SET_CONFIG_VALUE_STR("WIFI_AP_SSID", wifi_ap_ssid);
+                    SET_CONFIG_VALUE_STR("WIFI_AP_PASS", wifi_ap_pass);
+
                     ESP_LOGE(TAG, "Unknown config value %s=%s", key, value);
                 }
             }
