@@ -71,26 +71,32 @@ typedef struct {
     float energy_meter_vlt_scale;
 
     bool aux_in_1 : 1;
+    bool aux_in_1_pullup : 1;
     char aux_in_1_name[8];
     gpio_num_t aux_in_1_gpio;
 
     bool aux_in_2 : 1;
+    bool aux_in_2_pullup : 1;
     char aux_in_2_name[8];
     gpio_num_t aux_in_2_gpio;
 
     bool aux_in_3 : 1;
+    bool aux_in_3_pullup : 1;
     char aux_in_3_name[8];
     gpio_num_t aux_in_3_gpio;
 
     bool aux_in_4 : 1;
+    bool aux_in_4_pullup : 1;
     char aux_in_4_name[8];
     gpio_num_t aux_in_4_gpio;
 
     bool aux_in_5 : 1;
+    bool aux_in_5_pullup : 1;
     char aux_in_5_name[8];
     gpio_num_t aux_in_5_gpio;
 
     bool aux_in_6 : 1;
+    bool aux_in_6_pullup : 1;
     char aux_in_6_name[8];
     gpio_num_t aux_in_6_gpio;
 

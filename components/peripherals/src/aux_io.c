@@ -37,7 +37,7 @@ void aux_init(void)
 
     gpio_config_t io_conf = {
         .mode = GPIO_MODE_INPUT,
-        .pull_up_en = GPIO_PULLDOWN_DISABLE,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
         .intr_type = GPIO_INTR_DISABLE,
         .pin_bit_mask = 0,
@@ -46,46 +46,54 @@ void aux_init(void)
     if (board_config.aux_in_1) {
         aux_in[aux_in_count].gpio = board_config.aux_in_1_gpio;
         aux_in[aux_in_count].name = board_config.aux_in_1_name;
-        io_conf.pin_bit_mask |= BIT64(board_config.aux_in_1_gpio);
+        io_conf.pin_bit_mask = BIT64(board_config.aux_in_1_gpio);
         aux_in_count++;
+        io_conf.pull_up_en = board_config.aux_in_1_pullup ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE;
+        ESP_ERROR_CHECK(gpio_config(&io_conf));
     }
 
     if (board_config.aux_in_2) {
         aux_in[aux_in_count].gpio = board_config.aux_in_2_gpio;
         aux_in[aux_in_count].name = board_config.aux_in_2_name;
-        io_conf.pin_bit_mask |= BIT64(board_config.aux_in_2_gpio);
+        io_conf.pin_bit_mask = BIT64(board_config.aux_in_2_gpio);
         aux_in_count++;
+        io_conf.pull_up_en = board_config.aux_in_2_pullup ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE;
+        ESP_ERROR_CHECK(gpio_config(&io_conf));
     }
 
     if (board_config.aux_in_3) {
         aux_in[aux_in_count].gpio = board_config.aux_in_3_gpio;
         aux_in[aux_in_count].name = board_config.aux_in_3_name;
-        io_conf.pin_bit_mask |= BIT64(board_config.aux_in_3_gpio);
+        io_conf.pin_bit_mask = BIT64(board_config.aux_in_3_gpio);
         aux_in_count++;
+        io_conf.pull_up_en = board_config.aux_in_3_pullup ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE;
+        ESP_ERROR_CHECK(gpio_config(&io_conf));
     }
 
     if (board_config.aux_in_4) {
         aux_in[aux_in_count].gpio = board_config.aux_in_4_gpio;
         aux_in[aux_in_count].name = board_config.aux_in_4_name;
-        io_conf.pin_bit_mask |= BIT64(board_config.aux_in_4_gpio);
+        io_conf.pin_bit_mask = BIT64(board_config.aux_in_4_gpio);
         aux_in_count++;
+        io_conf.pull_up_en = board_config.aux_in_4_pullup ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE;
+        ESP_ERROR_CHECK(gpio_config(&io_conf));
     }
 
     if (board_config.aux_in_5) {
         aux_in[aux_in_count].gpio = board_config.aux_in_5_gpio;
         aux_in[aux_in_count].name = board_config.aux_in_5_name;
-        io_conf.pin_bit_mask |= BIT64(board_config.aux_in_5_gpio);
+        io_conf.pin_bit_mask = BIT64(board_config.aux_in_5_gpio);
         aux_in_count++;
+        io_conf.pull_up_en = board_config.aux_in_5_pullup ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE;
+        ESP_ERROR_CHECK(gpio_config(&io_conf));
     }
 
     if (board_config.aux_in_6) {
         aux_in[aux_in_count].gpio = board_config.aux_in_6_gpio;
         aux_in[aux_in_count].name = board_config.aux_in_6_name;
-        io_conf.pin_bit_mask |= BIT64(board_config.aux_in_6_gpio);
+        io_conf.pin_bit_mask = BIT64(board_config.aux_in_6_gpio);
         aux_in_count++;
-    }
-
-    if (io_conf.pin_bit_mask > 0) {
+        io_conf.pull_up_en = board_config.aux_in_6_pullup ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE;
         ESP_ERROR_CHECK(gpio_config(&io_conf));
     }
 
@@ -93,6 +101,7 @@ void aux_init(void)
 
     io_conf.mode = GPIO_MODE_OUTPUT;
     io_conf.pin_bit_mask = 0;
+    io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
 
     if (board_config.aux_out_1) {
         aux_out[aux_out_count].gpio = board_config.aux_out_1_gpio;

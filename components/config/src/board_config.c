@@ -125,21 +125,27 @@ void board_config_load()
                     SET_CONFIG_VALUE("AUX_IN_1", aux_in_1, atob);
                     SET_CONFIG_VALUE_STR("AUX_IN_1_NAME", aux_in_1_name);
                     SET_CONFIG_VALUE("AUX_IN_1_GPIO", aux_in_1_gpio, atoi);
+                    SET_CONFIG_VALUE("AUX_IN_1_PULLUP", aux_in_1_pullup, atob);
                     SET_CONFIG_VALUE("AUX_IN_2", aux_in_2, atob);
                     SET_CONFIG_VALUE_STR("AUX_IN_2_NAME", aux_in_2_name);
                     SET_CONFIG_VALUE("AUX_IN_2_GPIO", aux_in_2_gpio, atoi);
+                    SET_CONFIG_VALUE("AUX_IN_2_PULLUP", aux_in_2_pullup, atob);
                     SET_CONFIG_VALUE("AUX_IN_3", aux_in_3, atob);
                     SET_CONFIG_VALUE_STR("AUX_IN_3_NAME", aux_in_3_name);
                     SET_CONFIG_VALUE("AUX_IN_3_GPIO", aux_in_3_gpio, atoi);
+                    SET_CONFIG_VALUE("AUX_IN_3_PULLUP", aux_in_3_pullup, atob);
                     SET_CONFIG_VALUE("AUX_IN_4", aux_in_4, atob);
                     SET_CONFIG_VALUE_STR("AUX_IN_4_NAME", aux_in_4_name);
                     SET_CONFIG_VALUE("AUX_IN_4_GPIO", aux_in_4_gpio, atoi);
+                    SET_CONFIG_VALUE("AUX_IN_4_PULLUP", aux_in_4_pullup, atob);
                     SET_CONFIG_VALUE("AUX_IN_5", aux_in_5, atob);
                     SET_CONFIG_VALUE_STR("AUX_IN_5_NAME", aux_in_5_name);
                     SET_CONFIG_VALUE("AUX_IN_5_GPIO", aux_in_5_gpio, atoi);
+                    SET_CONFIG_VALUE("AUX_IN_5_PULLUP", aux_in_5_pullup, atob);
                     SET_CONFIG_VALUE("AUX_IN_6", aux_in_6, atob);
                     SET_CONFIG_VALUE_STR("AUX_IN_6_NAME", aux_in_6_name);
                     SET_CONFIG_VALUE("AUX_IN_6_GPIO", aux_in_6_gpio, atoi);
+                    SET_CONFIG_VALUE("AUX_IN_6_PULLUP", aux_in_6_pullup, atob);
 
                     SET_CONFIG_VALUE("AUX_OUT_1", aux_out_1, atob);
                     SET_CONFIG_VALUE_STR("AUX_OUT_1_NAME", aux_out_1_name);
