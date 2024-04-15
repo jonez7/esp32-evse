@@ -54,6 +54,8 @@ typedef struct
     uint16_t socket_lock_min_break_time;
 
     bool rcm : 1;
+    bool rcm_gpio_pullup : 1;
+    bool rcm_test : 1;
     gpio_num_t rcm_gpio;
     gpio_num_t rcm_test_gpio;
 
@@ -86,6 +88,14 @@ typedef struct
     char aux_in_4_name[8];
     gpio_num_t aux_in_4_gpio;
 
+    bool aux_in_5 : 1;
+    char aux_in_5_name[8];
+    gpio_num_t aux_in_5_gpio;
+
+    bool aux_in_6 : 1;
+    char aux_in_6_name[8];
+    gpio_num_t aux_in_6_gpio;
+
     bool aux_out_1 : 1;
     char aux_out_1_name[8];
     gpio_num_t aux_out_1_gpio;
@@ -101,6 +111,14 @@ typedef struct
     bool aux_out_4 : 1;
     char aux_out_4_name[8];
     gpio_num_t aux_out_4_gpio;
+
+    bool aux_out_5 : 1;
+    char aux_out_5_name[8];
+    gpio_num_t aux_out_5_gpio;
+
+    bool aux_out_6 : 1;
+    char aux_out_6_name[8];
+    gpio_num_t aux_out_6_gpio;
 
     bool aux_ain_1 : 1;
     char aux_ain_1_name[8];
