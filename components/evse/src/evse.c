@@ -152,13 +152,16 @@ static void set_socket_lock(bool locked)
 static void perform_rcm_selftest(void)
 {
     if (!rcm_selftest) {
-        if (!rcm_test()) {
-            ESP_LOGW(TAG, "Residual current monitor self test fail");
-            set_error_bits(EVSE_ERR_RCM_SELFTEST_FAULT_BIT);
+        if(board_config.rcm_test) {
+            if (!rcm_test()) {
+                ESP_LOGW(TAG, "Residual current monitor self test fail");
+                set_error_bits(EVSE_ERR_RCM_SELFTEST_FAULT_BIT);
+            } else {
+                ESP_LOGI(TAG, "Residual current monitor self test success");
+            }
         } else {
-            ESP_LOGI(TAG, "Residual current monitor self test success");
+            ESP_LOGI(TAG, "Residual current monitor self test disabled even RCM present");
         }
-
         rcm_selftest = true;
     }
 }
@@ -534,6 +537,7 @@ void evse_init()
     if (nvs_get_u8(nvs, NVS_RCM, &u8) == ESP_OK) {
         rcm = u8 && board_config.rcm;
     }
+    ESP_LOGI(TAG, "evse_init RCM state %d", rcm);
 
     nvs_get_u8(nvs, NVS_TEMP_THRESHOLD, &temp_threshold);
 
