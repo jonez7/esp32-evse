@@ -60,6 +60,12 @@ static int l_set_available(lua_State* L)
     return 0;
 }
 
+static int l_get_max_charging_current(lua_State* L)
+{
+    lua_pushnumber(L, evse_get_max_charging_current());
+    return 1;
+}
+
 static int l_get_charging_current(lua_State* L)
 {
     lua_pushnumber(L, evse_get_charging_current() / 10.0f);
@@ -261,6 +267,7 @@ static const luaL_Reg lib[] = {
     {"setenabled",          l_set_enabled},
     {"getavailable",        l_get_available},
     {"setavailable",        l_set_available},
+    {"getmaxchargingcurrent", l_get_max_charging_current},
     {"getchargingcurrent",  l_get_charging_current},
     {"setchargingcurrent",  l_set_charging_current},
     {"getpower",            l_get_power},
