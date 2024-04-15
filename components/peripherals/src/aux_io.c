@@ -11,8 +11,8 @@
 #include "adc.h"
 #include "board_config.h"
 
-#define MAX_AUX_IN  4
-#define MAX_AUX_OUT 4
+#define MAX_AUX_IN  6
+#define MAX_AUX_OUT 6
 #define MAX_AUX_AIN 4
 
 // static const char* TAG = "aux";
@@ -71,6 +71,20 @@ void aux_init(void)
         aux_in_count++;
     }
 
+    if (board_config.aux_in_5) {
+        aux_in[aux_in_count].gpio = board_config.aux_in_5_gpio;
+        aux_in[aux_in_count].name = board_config.aux_in_5_name;
+        io_conf.pin_bit_mask |= BIT64(board_config.aux_in_5_gpio);
+        aux_in_count++;
+    }
+
+    if (board_config.aux_in_6) {
+        aux_in[aux_in_count].gpio = board_config.aux_in_6_gpio;
+        aux_in[aux_in_count].name = board_config.aux_in_6_name;
+        io_conf.pin_bit_mask |= BIT64(board_config.aux_in_6_gpio);
+        aux_in_count++;
+    }
+
     if (io_conf.pin_bit_mask > 0) {
         ESP_ERROR_CHECK(gpio_config(&io_conf));
     }
@@ -105,6 +119,20 @@ void aux_init(void)
         aux_out[aux_out_count].gpio = board_config.aux_out_4_gpio;
         aux_out[aux_out_count].name = board_config.aux_out_4_name;
         io_conf.pin_bit_mask |= BIT64(board_config.aux_out_4_gpio);
+        aux_out_count++;
+    }
+
+    if (board_config.aux_out_5) {
+        aux_out[aux_out_count].gpio = board_config.aux_out_5_gpio;
+        aux_out[aux_out_count].name = board_config.aux_out_5_name;
+        io_conf.pin_bit_mask |= BIT64(board_config.aux_out_5_gpio);
+        aux_out_count++;
+    }
+
+    if (board_config.aux_out_6) {
+        aux_out[aux_out_count].gpio = board_config.aux_out_6_gpio;
+        aux_out[aux_out_count].name = board_config.aux_out_6_name;
+        io_conf.pin_bit_mask |= BIT64(board_config.aux_out_6_gpio);
         aux_out_count++;
     }
 

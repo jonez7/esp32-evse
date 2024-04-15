@@ -33,7 +33,8 @@ void rcm_init(void)
         ESP_ERROR_CHECK(gpio_config(&io_conf));
 
         io_conf.mode = GPIO_MODE_INPUT;
-        // io_conf.intr_type = GPIO_INTR_POSEDGE;
+        io_conf.pull_up_en = board_config.rcm_gpio_pullup;
+       // io_conf.intr_type = GPIO_INTR_POSEDGE;
         io_conf.pin_bit_mask = BIT64(board_config.rcm_gpio);
         ESP_ERROR_CHECK(gpio_config(&io_conf));
         // ESP_ERROR_CHECK(gpio_isr_handler_add(board_config.rcm_gpio, rcm_isr_handler, NULL));
@@ -68,6 +69,7 @@ bool rcm_is_triggered(void)
     //     triggered = false;
     // }
     // return _triggered;
+
     if (gpio_get_level(board_config.rcm_gpio) == 1) {
         vTaskDelay(pdMS_TO_TICKS(1));
         return gpio_get_level(board_config.rcm_gpio) == 1;

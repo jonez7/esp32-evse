@@ -110,6 +110,8 @@ void board_config_load()
                     SET_CONFIG_VALUE("RCM", rcm, atob);
                     SET_CONFIG_VALUE("RCM_GPIO", rcm_gpio, atoi);
                     SET_CONFIG_VALUE("RCM_TEST_GPIO", rcm_test_gpio, atoi);
+                    SET_CONFIG_VALUE("RCM_TEST", rcm_test, atob);
+                    SET_CONFIG_VALUE("RCM_GPIO_PULLUP", rcm_gpio_pullup, atob);
                     SET_CONFIG_VALUE("ENERGY_METER", energy_meter, atoem);
                     SET_CONFIG_VALUE("ENERGY_METER_THREE_PHASES", energy_meter_three_phases, atob);
                     SET_CONFIG_VALUE("ENERGY_METER_L1_CUR_ADC_CHANNEL", energy_meter_l1_cur_adc_channel, atoi);
@@ -132,6 +134,13 @@ void board_config_load()
                     SET_CONFIG_VALUE("AUX_IN_4", aux_in_4, atob);
                     SET_CONFIG_VALUE_STR("AUX_IN_4_NAME", aux_in_4_name);
                     SET_CONFIG_VALUE("AUX_IN_4_GPIO", aux_in_4_gpio, atoi);
+                    SET_CONFIG_VALUE("AUX_IN_5", aux_in_5, atob);
+                    SET_CONFIG_VALUE_STR("AUX_IN_5_NAME", aux_in_5_name);
+                    SET_CONFIG_VALUE("AUX_IN_5_GPIO", aux_in_5_gpio, atoi);
+                    SET_CONFIG_VALUE("AUX_IN_6", aux_in_6, atob);
+                    SET_CONFIG_VALUE_STR("AUX_IN_6_NAME", aux_in_6_name);
+                    SET_CONFIG_VALUE("AUX_IN_6_GPIO", aux_in_6_gpio, atoi);
+
                     SET_CONFIG_VALUE("AUX_OUT_1", aux_out_1, atob);
                     SET_CONFIG_VALUE_STR("AUX_OUT_1_NAME", aux_out_1_name);
                     SET_CONFIG_VALUE("AUX_OUT_1_GPIO", aux_out_1_gpio, atoi);
@@ -144,6 +153,12 @@ void board_config_load()
                     SET_CONFIG_VALUE("AUX_OUT_4", aux_out_4, atob);
                     SET_CONFIG_VALUE_STR("AUX_OUT_4_NAME", aux_out_4_name);
                     SET_CONFIG_VALUE("AUX_OUT_4_GPIO", aux_out_4_gpio, atoi);
+                    SET_CONFIG_VALUE("AUX_OUT_5", aux_out_5, atob);
+                    SET_CONFIG_VALUE_STR("AUX_OUT_5_NAME", aux_out_5_name);
+                    SET_CONFIG_VALUE("AUX_OUT_5_GPIO", aux_out_5_gpio, atoi);
+                    SET_CONFIG_VALUE("AUX_OUT_6", aux_out_6, atob);
+                    SET_CONFIG_VALUE_STR("AUX_OUT_6_NAME", aux_out_6_name);
+                    SET_CONFIG_VALUE("AUX_OUT_6_GPIO", aux_out_6_gpio, atoi);
                     SET_CONFIG_VALUE("AUX_AIN_1", aux_ain_1, atob);
                     SET_CONFIG_VALUE_STR("AUX_AIN_1_NAME", aux_ain_1_name);
                     SET_CONFIG_VALUE("AUX_AIN_1_ADC_CHANNEL", aux_ain_1_adc_channel, atoi);
