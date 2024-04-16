@@ -27,6 +27,8 @@ menu "EVSE Configuration"
 			bool "custom"
 		config BOARD_CONFIG_OULWARE
 			bool "oulware"
+		config BOARD_CONFIG_OULWAREWBOX
+			bool "oulwarewbox"
 	endchoice
 
 	config BOARD_CONFIG
@@ -38,5 +40,6 @@ menu "EVSE Configuration"
 		default "esp32s2da" if BOARD_CONFIG_ESP32S2DA
 		default "custom" if BOARD_CONFIG_CUSTON
 		default "oulware" if BOARD_CONFIG_OULWARE
+		default "oulwarewbox" if BOARD_CONFIG_OULWAREWBOX
 
 endmenu
