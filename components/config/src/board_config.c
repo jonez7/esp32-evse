@@ -202,6 +202,13 @@ void board_config_load()
                     SET_CONFIG_VALUE_STR("WIFI_AP_SSID", wifi_ap_ssid);
                     SET_CONFIG_VALUE_STR("WIFI_AP_PASS", wifi_ap_pass);
 
+                    SET_CONFIG_VALUE_STR("MQTT_URI", mqtt_uri);
+                    SET_CONFIG_VALUE_STR("MQTT_MAIN_TOPIC", mqtt_main_topic);
+                    SET_CONFIG_VALUE_STR("MQTT_CLIENT_ID", mqtt_client_id);
+                    SET_CONFIG_VALUE_STR("MQTT_USER", mqtt_username);
+                    SET_CONFIG_VALUE_STR("MQTT_PASSWORD", mqtt_password);
+                    SET_CONFIG_VALUE("MQTT_HOMEASSISTANT_DISCOVERY", mqtt_homeassistant_discovery, atob);
+
                     ESP_LOGE(TAG, "Unknown config value %s=%s", key, value);
                 }
             }
