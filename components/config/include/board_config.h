@@ -159,6 +159,13 @@ typedef struct
     bool wifi_ap_autostart: 1;
     char wifi_ap_ssid[32];
     char wifi_ap_pass[64];
+
+    char mqtt_uri[32];
+    char mqtt_main_topic[11];
+    char mqtt_client_id[11];
+    char mqtt_username[32];
+    char mqtt_password[32];
+    bool mqtt_homeassistant_discovery : 1;
 } board_config_t;
 
 extern board_config_t board_config;
