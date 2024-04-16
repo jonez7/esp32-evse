@@ -17,6 +17,7 @@
 #include "peripherals.h"
 #include "led.h"
 #include "modbus.h"
+#include "_mqtt.h"
 #include "protocols.h"
 #include "serial.h"
 #include "board_config.h"
@@ -259,6 +260,7 @@ void app_main(void)
     wifi_init();
     peripherals_init();
     modbus_init();
+    mqtt_init();
     serial_init();
     protocols_init();
     evse_init();
