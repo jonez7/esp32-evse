@@ -23,6 +23,7 @@
 #include "script.h"
 #include "serial.h"
 #include "wifi.h"
+#include "_mqtt.h"
 
 #define AP_CONNECTION_TIMEOUT 60000  // 60sec
 #define RESET_HOLD_TIME       10000  // 10sec
@@ -258,6 +259,7 @@ void app_main(void)
     wifi_init();
     peripherals_init();
     modbus_init();
+    mqtt_init();
     serial_init();
     protocols_init();
     evse_init();
