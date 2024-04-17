@@ -24,6 +24,7 @@
 #include "serial.h"
 #include "wifi.h"
 #include "mqtt.h"
+#include "addressable_led.h"
 
 #define AP_CONNECTION_TIMEOUT 60000  // 60sec
 #define RESET_HOLD_TIME       10000  // 10sec
@@ -180,6 +181,11 @@ static bool ota_diagnostic(void)
     return true;
 }
 
+#define ADDRESSABLE_LED_READY           0,128,0
+#define ADDRESSABLE_LED_EV_CONNECTED    128,90,0
+#define ADDRESSABLE_LED_CHARGING        0,0,128
+#define ADDRESSABLE_LED_ERROR           128,0,0
+
 static void update_leds(void)
 {
     if (led_state != evse_get_state()) {
@@ -189,29 +195,35 @@ static void update_leds(void)
         case EVSE_STATE_A:
             led_set_off(LED_ID_CHARGING);
             led_set_off(LED_ID_ERROR);
+            addressable_led_set_rgb(ADDRESSABLE_LED_READY);
             break;
         case EVSE_STATE_B1:
         case EVSE_STATE_B2:
             led_set_state(LED_ID_CHARGING, 500, 500);
             led_set_off(LED_ID_ERROR);
+            addressable_led_set_rgb(ADDRESSABLE_LED_EV_CONNECTED);
             break;
         case EVSE_STATE_C1:
         case EVSE_STATE_D1:
             led_set_state(LED_ID_CHARGING, 1900, 100);
             led_set_off(LED_ID_ERROR);
+            addressable_led_set_rgb(ADDRESSABLE_LED_CHARGING);
             break;
         case EVSE_STATE_C2:
         case EVSE_STATE_D2:
             led_set_on(LED_ID_CHARGING);
             led_set_off(LED_ID_ERROR);
+            addressable_led_set_rgb(ADDRESSABLE_LED_CHARGING);
             break;
         case EVSE_STATE_E:
             led_set_off(LED_ID_CHARGING);
             led_set_on(LED_ID_ERROR);
+            addressable_led_set_rgb(ADDRESSABLE_LED_ERROR);
             break;
         case EVSE_STATE_F:
             led_set_off(LED_ID_CHARGING);
             led_set_state(LED_ID_ERROR, 500, 500);
+            addressable_led_set_rgb(ADDRESSABLE_LED_ERROR);
             break;
         }
     }
@@ -265,6 +277,7 @@ void app_main(void)
     evse_init();
     button_init();
     script_init();
+    addressable_led_init();
 
     xTaskCreate(wifi_event_task_func, "wifi_event_task", 4 * 1024, NULL, 5, NULL);
     xTaskCreate(user_input_task_func, "user_input_task", 2 * 1024, NULL, 5, &user_input_task);

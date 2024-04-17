@@ -210,6 +210,9 @@ void board_config_load()
                     SET_CONFIG_VALUE_STR("MQTT_PASSWORD", mqtt_password);
                     SET_CONFIG_VALUE("MQTT_HOMEASSISTANT_DISCOVERY", mqtt_homeassistant_discovery, atob);
 
+                    SET_CONFIG_VALUE("ADDRESSABLE_LED", addressable_led, atob);
+                    SET_CONFIG_VALUE("ADDRESSABLE_LED_GPIO", addressable_led_gpio, atoi);
+
                     ESP_LOGE(TAG, "Unknown config value %s=%s", key, value);
                 }
             }

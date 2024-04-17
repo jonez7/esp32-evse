@@ -11,9 +11,10 @@ set(srcs
     "src/aux_io.c"
     "src/onewire.c"
     "src/ds18x20.c"
-    "src/temp_sensor.c")
+    "src/temp_sensor.c"
+    "src/addressable_led.c")
 
 idf_component_register(SRCS "${srcs}"
                     INCLUDE_DIRS "include"
-                    PRIV_REQUIRES nvs_flash driver esp_adc esp_timer
+                    PRIV_REQUIRES nvs_flash driver esp_adc esp_timer espressif__led_strip
                     REQUIRES config evse)
