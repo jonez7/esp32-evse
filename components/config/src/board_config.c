@@ -202,6 +202,9 @@ void board_config_load()
                     SET_CONFIG_VALUE_STR("WIFI_AP_SSID", wifi_ap_ssid);
                     SET_CONFIG_VALUE_STR("WIFI_AP_PASS", wifi_ap_pass);
 
+                    SET_CONFIG_VALUE("ADDRESSABLE_LED", addressable_led, atob);
+                    SET_CONFIG_VALUE("ADDRESSABLE_LED_GPIO", addressable_led_gpio, atoi);
+
                     ESP_LOGE(TAG, "Unknown config value %s=%s", key, value);
                 }
             }
