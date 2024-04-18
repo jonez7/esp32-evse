@@ -112,6 +112,7 @@ void board_config_load()
                     SET_CONFIG_VALUE("RCM_TEST_GPIO", rcm_test_gpio, atoi);
                     SET_CONFIG_VALUE("RCM_TEST", rcm_test, atob);
                     SET_CONFIG_VALUE("RCM_GPIO_PULLUP", rcm_gpio_pullup, atob);
+                    SET_CONFIG_VALUE("RCM_GPIO_INVERTED", rcm_gpio_inverted, atob);
                     SET_CONFIG_VALUE("ENERGY_METER", energy_meter, atoem);
                     SET_CONFIG_VALUE("ENERGY_METER_THREE_PHASES", energy_meter_three_phases, atob);
                     SET_CONFIG_VALUE("ENERGY_METER_L1_CUR_ADC_CHANNEL", energy_meter_l1_cur_adc_channel, atoi);
