@@ -70,9 +70,10 @@ bool rcm_is_triggered(void)
     // }
     // return _triggered;
 
-    if (gpio_get_level(board_config.rcm_gpio) == 1) {
+    uint8_t state_to_test = board_config.rcm_gpio_inverted ? 0 : 1;
+    if (gpio_get_level(board_config.rcm_gpio) == state_to_test) {
         vTaskDelay(pdMS_TO_TICKS(1));
-        return gpio_get_level(board_config.rcm_gpio) == 1;
+        return gpio_get_level(board_config.rcm_gpio) == state_to_test;
     }
 
     return false;

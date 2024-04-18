@@ -54,6 +54,7 @@ typedef struct {
 
     bool rcm : 1;
     bool rcm_gpio_pullup : 1;
+    bool rcm_gpio_inverted : 1;
     bool rcm_test : 1;
     gpio_num_t rcm_gpio;
     gpio_num_t rcm_test_gpio;
