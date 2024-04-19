@@ -55,6 +55,7 @@ typedef struct
 
     bool rcm : 1;
     bool rcm_gpio_pullup : 1;
+    bool rcm_gpio_inverted : 1;
     bool rcm_test : 1;
     gpio_num_t rcm_gpio;
     gpio_num_t rcm_test_gpio;
@@ -167,6 +168,10 @@ typedef struct
     char mqtt_username[32];
     char mqtt_password[32];
     bool mqtt_homeassistant_discovery : 1;
+
+    bool addressable_led :1;
+    gpio_num_t addressable_led_gpio;
+
 } board_config_t;
 
 extern board_config_t board_config;
