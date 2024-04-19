@@ -202,6 +202,7 @@ void board_config_load()
                     SET_CONFIG_VALUE_STR("WIFI_AP_SSID", wifi_ap_ssid);
                     SET_CONFIG_VALUE_STR("WIFI_AP_PASS", wifi_ap_pass);
 
+                    SET_CONFIG_VALUE("MQTT", mqtt, atob);
                     SET_CONFIG_VALUE_STR("MQTT_URI", mqtt_uri);
                     SET_CONFIG_VALUE_STR("MQTT_MAIN_TOPIC", mqtt_main_topic);
                     SET_CONFIG_VALUE_STR("MQTT_CLIENT_ID", mqtt_client_id);
