@@ -158,6 +158,7 @@ typedef struct {
     char wifi_ap_ssid[32];
     char wifi_ap_pass[64];
 
+    bool mqtt : 1;
     char mqtt_uri[32];
     char mqtt_main_topic[11];
     char mqtt_client_id[11];
