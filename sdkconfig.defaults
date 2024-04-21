@@ -1,3 +1,5 @@
+CONFIG_BOARD_CONFIG_OULWARE=y
+
 #
 # Partition
 #

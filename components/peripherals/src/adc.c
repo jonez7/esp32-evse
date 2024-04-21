@@ -12,6 +12,8 @@ void adc_init(void)
 {
     adc_oneshot_unit_init_cfg_t conf = {
         .unit_id = ADC_UNIT_1,
+        .clk_src = ADC_DIGI_CLK_SRC_DEFAULT,
+        .ulp_mode = ADC_ULP_MODE_DISABLE,
     };
     ESP_ERROR_CHECK(adc_oneshot_new_unit(&conf, &adc_handle));
 
