@@ -16,6 +16,7 @@ typedef struct {
     TickType_t tick_100ms;
     TickType_t tick_250ms;
     TickType_t tick_1s;
+    TickType_t tick_10s;
     int drivers_ref;
 } evse_userdata_t;
 
@@ -76,6 +77,22 @@ static int l_set_charging_current(lua_State* L)
     luaL_argcheck(L, lua_isnumber(L, 1), 1, "Must be number");
     uint16_t value = round(lua_tonumber(L, 1) * 10);
     if (evse_set_charging_current(value) != ESP_OK) {
+        luaL_argerror(L, 1, "Invalid value");
+    }
+    return 0;
+}
+
+static int l_get_default_charging_current(lua_State* L)
+{
+    lua_pushnumber(L, evse_get_default_charging_current() / 10.0f);
+    return 1;
+}
+
+static int l_set_default_charging_current(lua_State* L)
+{
+    luaL_argcheck(L, lua_isnumber(L, 1), 1, "Must be number");
+    uint16_t value = round(lua_tonumber(L, 1) * 10);
+    if (evse_set_default_charging_current(value) != ESP_OK) {
         luaL_argerror(L, 1, "Invalid value");
     }
     return 0;
@@ -171,21 +188,27 @@ void l_evse_process(lua_State* L)
     TickType_t now = xTaskGetTickCount();
 
     bool every_100ms = false;
-    if (now - userdata->tick_100ms >= pdMS_TO_TICKS(100)) {
+    if ((now - userdata->tick_100ms) >= pdMS_TO_TICKS(100)) {
         userdata->tick_100ms = now;
         every_100ms = true;
     }
 
     bool every_250ms = false;
-    if (now - userdata->tick_250ms >= pdMS_TO_TICKS(250)) {
+    if ((now - userdata->tick_250ms) >= pdMS_TO_TICKS(250)) {
         userdata->tick_250ms = now;
         every_250ms = true;
     }
 
     bool every_1s = false;
-    if (now - userdata->tick_1s >= pdMS_TO_TICKS(1000)) {
+    if ((now - userdata->tick_1s) >= pdMS_TO_TICKS(1000)) {
         userdata->tick_1s = now;
         every_1s = true;
+    }
+
+    bool every_10s = false;
+    if ((now - userdata->tick_10s) >= pdMS_TO_TICKS(10000)) {
+        userdata->tick_10s = now;
+        every_10s = true;
     }
 
     lua_rawgeti(L, LUA_REGISTRYINDEX, userdata->drivers_ref);
@@ -203,6 +226,9 @@ void l_evse_process(lua_State* L)
         }
         if (every_1s) {
             call_field_event(L, "every1s");
+        }
+        if (every_10s) {
+            call_field_event(L, "every10s");
         }
 
         lua_pop(L, 1);
@@ -269,6 +295,8 @@ static const luaL_Reg lib[] = {
     { "getmaxchargingcurrent", l_get_max_charging_current},
     { "getchargingcurrent", l_get_charging_current },
     { "setchargingcurrent", l_set_charging_current },
+    { "getdefaultchargingcurrent", l_get_default_charging_current},
+    { "setdefaultchargingcurrent", l_set_default_charging_current},
     { "getpower", l_get_power },
     { "getchargingtime", l_get_charging_time },
     { "getsessiontime", l_get_session_time },
@@ -343,6 +371,7 @@ int luaopen_evse(lua_State* L)
     userdata->tick_100ms = now;
     userdata->tick_250ms = now;
     userdata->tick_1s = now;
+    userdata->tick_10s = now;
 
     lua_newtable(L);
     userdata->drivers_ref = luaL_ref(L, LUA_REGISTRYINDEX);
