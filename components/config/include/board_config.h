@@ -172,6 +172,11 @@ typedef struct
     bool addressable_led :1;
     gpio_num_t addressable_led_gpio;
 
+    bool thermistor :1;
+    adc_channel_t thermistor_adc_channel;
+    uint32_t thermistor_r1;
+    uint32_t thermistor_nominal_r;
+    uint32_t thermistor_beta;
 } board_config_t;
 
 extern board_config_t board_config;

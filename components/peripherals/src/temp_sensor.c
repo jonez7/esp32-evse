@@ -4,14 +4,20 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "driver/gpio.h"
+#include "esp_adc/adc_oneshot.h"
+#include "rom/ets_sys.h"
 
 #include "temp_sensor.h"
 #include "board_config.h"
 #include "ds18x20.h"
+#include "adc.h"
+
+#include <math.h>
 
 #define MAX_SENSORS                 5
 #define MEASURE_PERIOD              10000   //10s
 #define MEASURE_ERR_THRESHOLD       3
+#define ADC_MAX                     ((1 << 13) - 1)
 
 static const char* TAG = "temp_sensor";
 
@@ -26,6 +32,62 @@ static int16_t low_temp = 0;
 static int16_t high_temp = 0;
 
 static uint8_t measure_err_count = 0;
+
+static adc_oneshot_unit_handle_t m_handle;
+
+bool thermistor_init(void)
+{
+    adc_oneshot_unit_init_cfg_t conf = {
+        .unit_id = ADC_UNIT_1,
+        .clk_src = ADC_DIGI_CLK_SRC_DEFAULT,
+        .ulp_mode = ADC_ULP_MODE_DISABLE,
+    };
+    esp_err_t err = adc_oneshot_new_unit(&conf, &m_handle);
+    if (err == ESP_ERR_NOT_FOUND) {
+        ESP_LOGI(TAG, "ADC one shot already configured... err: %d", err);
+        m_handle = adc_handle;
+    } else if (err != ESP_OK) {
+        ESP_LOGI(TAG, "ADC one shot configured fail... err: %d", err);
+        return false;
+    }
+
+    adc_oneshot_chan_cfg_t config = {
+        .bitwidth = ADC_BITWIDTH_DEFAULT,
+        .atten = ADC_ATTEN_DB_12,
+    };
+    err = adc_oneshot_config_channel(m_handle, board_config.thermistor_adc_channel, &config);
+    if (err != ESP_OK) {
+        ESP_LOGI(TAG, "ADC init error");
+    }
+    return err == ESP_OK;
+}
+
+static void thermistor_task_func(void* param)
+{
+#define Kelvin 273.15
+    const float R1   = board_config.thermistor_r1;
+    const float Beta = board_config.thermistor_beta;
+    const float NTC_R = board_config.thermistor_nominal_r;
+    const float NTC_C = (Kelvin + 25.0);
+
+    const adc_channel_t adc_channel = board_config.thermistor_adc_channel;
+
+    while (true) {
+        int adc = 0;
+        for (int i = 0; i < 10; i++) {
+            adc_oneshot_read(m_handle, adc_channel, &adc);
+            ets_delay_us(20);
+        }
+        adc /= 8;
+
+        float Rt =  R1 * (((float)ADC_MAX / adc) - 1);
+        float K = (Beta * NTC_C) / (Beta + (NTC_C * logf(Rt / NTC_R)));
+        float C = K - Kelvin;               // convert to Celsius
+        low_temp = high_temp = (int16_t)(C * 100);
+
+        vTaskDelay(pdMS_TO_TICKS(MEASURE_PERIOD));
+    }
+}
 
 static void temp_sensor_task_func(void* param)
 {
@@ -70,6 +132,9 @@ void temp_sensor_init(void)
         if (sensor_count > 0) {
             xTaskCreate(temp_sensor_task_func, "temp_sensor_task", 2 * 1024, NULL, 5, NULL);
         }
+    } else if (board_config.thermistor) {
+        if (thermistor_init())
+            xTaskCreate(thermistor_task_func, "temp_sensor_task", 2 * 1024, NULL, 5, NULL);
     }
 }
 
