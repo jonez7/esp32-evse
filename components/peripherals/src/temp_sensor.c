@@ -133,8 +133,10 @@ void temp_sensor_init(void)
             xTaskCreate(temp_sensor_task_func, "temp_sensor_task", 2 * 1024, NULL, 5, NULL);
         }
     } else if (board_config.thermistor) {
-        if (thermistor_init())
+        if (thermistor_init()) {
             xTaskCreate(thermistor_task_func, "temp_sensor_task", 2 * 1024, NULL, 5, NULL);
+            sensor_count = 1;
+        }
     }
 }
 
