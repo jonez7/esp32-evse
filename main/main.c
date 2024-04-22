@@ -268,6 +268,9 @@ void app_main(void)
 
     board_config_load();
 
+    // Configure logging level
+    esp_log_level_set(board_config.log_component, board_config.log_level);
+
     wifi_init();
     peripherals_init();
     modbus_init();
