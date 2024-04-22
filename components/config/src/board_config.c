@@ -214,6 +214,12 @@ void board_config_load()
                     SET_CONFIG_VALUE("ADDRESSABLE_LED", addressable_led, atob);
                     SET_CONFIG_VALUE("ADDRESSABLE_LED_GPIO", addressable_led_gpio, atoi);
 
+                    SET_CONFIG_VALUE("THERMISTOR", thermistor, atob);
+                    SET_CONFIG_VALUE("THERMISTOR_ADC_CHANNEL", thermistor_adc_channel, atoi);
+                    SET_CONFIG_VALUE("THERMISTOR_R1", thermistor_r1, atoi);
+                    SET_CONFIG_VALUE("THERMISTOR_NOMINAL_R", thermistor_nominal_r, atoi);
+                    SET_CONFIG_VALUE("THERMISTOR_BETA", thermistor_beta, atoi);
+
                     ESP_LOGE(TAG, "Unknown config value %s=%s", key, value);
                 }
             }
