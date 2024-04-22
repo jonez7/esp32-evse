@@ -4,6 +4,7 @@
 #include "hal/adc_types.h"
 #include "hal/gpio_types.h"
 #include "soc/soc_caps.h"
+#include "esp_log.h"
 
 typedef enum {
     BOARD_CONFIG_ENERGY_METER_NONE,
@@ -177,6 +178,9 @@ typedef struct
     uint32_t thermistor_r1;
     uint32_t thermistor_nominal_r;
     uint32_t thermistor_beta;
+
+    esp_log_level_t log_level;
+    char log_component[32];
 } board_config_t;
 
 extern board_config_t board_config;

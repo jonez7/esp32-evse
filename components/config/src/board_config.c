@@ -1,7 +1,6 @@
 #include <string.h>
 #include <ctype.h>
 #include "esp_system.h"
-#include "esp_log.h"
 #include "esp_err.h"
 
 #include "board_config.h"
@@ -52,6 +51,10 @@ board_config_serial_t atoser(const char* value)
 void board_config_load()
 {
     memset(&board_config, 0, sizeof(board_config_t));
+
+    // Default to warning and all components
+    board_config.log_level = ESP_LOG_WARN;
+    board_config.log_component[0] = '*';
 
     FILE* file = fopen("/cfg/board.cfg", "r");
     if (file == NULL) {
@@ -219,6 +222,9 @@ void board_config_load()
                     SET_CONFIG_VALUE("THERMISTOR_R1", thermistor_r1, atoi);
                     SET_CONFIG_VALUE("THERMISTOR_NOMINAL_R", thermistor_nominal_r, atoi);
                     SET_CONFIG_VALUE("THERMISTOR_BETA", thermistor_beta, atoi);
+
+                    SET_CONFIG_VALUE("LOGGING_LEVEL", log_level, atoi);
+                    SET_CONFIG_VALUE_STR("LOGGING_COMPONENT", log_component);
 
                     ESP_LOGE(TAG, "Unknown config value %s=%s", key, value);
                 }
