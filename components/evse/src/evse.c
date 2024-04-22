@@ -297,8 +297,9 @@ static void check_other_error_conditions()
         set_error_bits(EVSE_ERR_RCM_TRIGGERED_BIT);
     }
 
-    if (board_config.onewire && board_config.onewire_temp_sensor) {
-        if (temp_sensor_get_high() > temp_threshold * 100) {
+    if ((board_config.onewire && board_config.onewire_temp_sensor) ||
+            board_config.thermistor) {
+        if (temp_sensor_get_high() > (temp_threshold * 100)) {
             set_error_bits(EVSE_ERR_TEMPERATURE_HIGH_BIT);
         } else {
             clear_error_bits(EVSE_ERR_TEMPERATURE_HIGH_BIT);
