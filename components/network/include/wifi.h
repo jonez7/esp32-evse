@@ -6,6 +6,8 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/event_groups.h>
 #include <stdbool.h>
+#include <esp_wifi.h>
+#include <esp_mac.h>
 
 #define WIFI_SCAN_SCAN_LIST_SIZE 10
 
@@ -99,5 +101,26 @@ void wifi_ap_start(void);
  *
  */
 void wifi_ap_stop(void);
+
+/**
+ * @brief Get WiFi IP Address
+ *
+ * @param ip
+ */
+void wifi_get_ip(char* ip);
+
+/**
+ * @brief Get WiFi MAC Address
+ *
+ * @param mac
+ */
+void wifi_get_mac(char* mac);
+
+/**
+ * @brief Get WiFi RSSI
+ *
+ * @param rssi
+ */
+int8_t wifi_get_rssi(void);
 
 #endif /* WIFI_H_ */

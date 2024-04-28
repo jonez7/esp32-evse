@@ -5,6 +5,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <sys/param.h>
+#include <string.h>
 
 #include "board_config.h"
 #include "ds18x20.h"
@@ -17,6 +18,8 @@ static const char* TAG = "temp_sensor";
 
 static ds18x20_addr_t sensor_addrs[MAX_SENSORS];
 
+static int16_t temps[MAX_SENSORS];
+
 static uint8_t sensor_count = 0;
 
 static int16_t low_temp = 0;
@@ -28,8 +31,6 @@ static uint8_t measure_err_count = 0;
 static void temp_sensor_task_func(void* param)
 {
     while (true) {
-        int16_t temps[MAX_SENSORS];
-
         esp_err_t err = ds18x20_measure_and_read_multi(board_config.onewire_gpio, sensor_addrs, sensor_count, temps);
         if (err == ESP_OK) {
             int16_t low = INT16_MAX;
@@ -78,6 +79,13 @@ uint8_t temp_sensor_get_count(void)
     return sensor_count;
 }
 
+void temp_sensor_get_temperatures(int16_t* curr_temps)
+{
+    if (sensor_count) {
+        memcpy(curr_temps, temps, sensor_count * sizeof(temps[0]));
+    }
+}
+
 int16_t temp_sensor_get_low(void)
 {
     return low_temp;
@@ -91,4 +99,11 @@ int16_t temp_sensor_get_high(void)
 bool temp_sensor_is_error(void)
 {
     return sensor_count == 0 || measure_err_count > MEASURE_ERR_THRESHOLD;
+}
+
+// CPU Temp
+extern  uint8_t temprature_sens_read();
+float temp_sensor_read_cpu_temperature(void)
+{
+    return (temprature_sens_read() - 32) / 1.8;
 }
