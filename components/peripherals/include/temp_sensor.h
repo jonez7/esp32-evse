@@ -18,6 +18,13 @@ void temp_sensor_init(void);
 uint8_t temp_sensor_get_count(void);
 
 /**
+ * @brief Return current temperatures after temp_sensor_measure
+ * 
+ * @param temperature Output array of sensor count items, values in Celsius
+ */
+void temp_sensor_get_temperatures(int16_t* curr_temps);
+
+/**
  * @brief Return lowest temperature after temp_sensor_measure
  * 
  * @return int16_t 
@@ -37,5 +44,12 @@ int16_t temp_sensor_get_high(void);
  * @return bool 
  */
 bool temp_sensor_is_error(void);
+
+/**
+ * @brief Read ESP CPU temperature
+ * 
+ * @return float 
+ */
+float temp_sensor_read_cpu_temperature(void);
 
 #endif /* TEMP_SENSOR_H_ */

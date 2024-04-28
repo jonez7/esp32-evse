@@ -275,3 +275,24 @@ bool wifi_is_ap(void)
     esp_wifi_get_mode(&mode);
     return mode == WIFI_MODE_APSTA;
 }
+
+void wifi_get_ip(char* ip)
+{
+  esp_netif_ip_info_t ip_info;
+  esp_netif_get_ip_info(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"), &ip_info);
+  sprintf(ip, IPSTR, IP2STR(&ip_info.ip));
+}
+
+void wifi_get_mac(char* mac)
+{
+    uint8_t mac_tmp[6];
+    esp_wifi_get_mac(ESP_IF_WIFI_STA, mac_tmp);
+    sprintf(mac, MACSTR, MAC2STR(mac_tmp));
+}
+
+int8_t wifi_get_rssi(void)
+{
+  wifi_ap_record_t ap;
+  esp_wifi_sta_get_ap_info(&ap);
+  return ap.rssi;
+}
