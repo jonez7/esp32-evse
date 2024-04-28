@@ -21,9 +21,11 @@
 #define NVS_NAMESPACE          "mqtt"
 #define NVS_HA_DISCOVERY_DONE  "ha_discovery"
 
-#define LWT_TOPIC        "connection"
-#define LWT_CONNECTED    "connected"
-#define LWT_DISCONNECTED "connection lost"
+#define LWT_TOPIC        "state"
+#define LWT_CONNECTED    "online"
+#define LWT_DISCONNECTED "offline"
+
+#define ARRAY_SIZE(_x_) (sizeof(_x_)/sizeof((_x_)[0]))
 
 static const char* TAG = "mqtt";
 
@@ -32,6 +34,17 @@ static nvs_handle nvs;
 static TaskHandle_t mqtt_task;
 
 static char lwt_topic[32];
+
+static int replacechar(char *str, char orig, char rep)
+{
+    char *ix = str;
+    int n = 0;
+    while((ix = strchr(ix, orig)) != NULL) {
+        *ix++ = rep;
+        n++;
+    }
+    return n;
+}
 
 #if 0
 static bool read_holding_register(uint16_t addr, uint16_t* value)
@@ -143,7 +156,77 @@ static bool read_holding_register(uint16_t addr, uint16_t* value)
 
 }
 #endif
-static void mqtt_config_component(
+static void mqtt_config_common_part(
+    char* payload,
+    char* field,
+    char* name,
+    char* icon,
+    char* entity_category,
+    uint8_t unique_nbr)
+{
+    char tmp[64];
+    const esp_app_desc_t* app_desc = esp_app_get_description();
+
+    wifi_get_ip(tmp);
+
+    sprintf(payload, 
+        "{"                                                 // 0
+        "\"~\": \"%s\","                                    // 1
+
+        "\"object_id\": \"%s_%s\","                         // 2
+        "\"name\": \"%s\","                                 // 3
+        "\"state_topic\": \"~/%s\","                        // 4
+        "\"availability\": ["                               // 5
+           "{"                                              // 6
+              "\"topic\": \"~/%s\","                        // 7
+              "\"payload_available\": \"%s\","              // 8
+              "\"payload_not_available\": \"%s\""           // 9
+           "}"                                              // 10
+          "],"                                              // 11
+        //"\"force_update\": \"true\","                       // 13
+        "\"device\": "                                      // 12
+          "{"                                               // 13
+              "\"identifiers\": [\"%s\"],"                  // 14
+              "\"name\": \"%s\","                           // 15
+              "\"model\": \"ESP32 EVSE\","                  // 16
+              "\"manufacturer\": \"OULWare\","              // 17
+              "\"sw_version\": \"%s\","                     // 18
+              "\"configuration_url\": \"http://%s\""        // 19
+          "}",                                              // 20
+        board_config.mqtt_main_topic,         // 1
+        board_config.mqtt_main_topic, field,  // 2
+        name,                                 // 3
+        field,                                // 4
+        LWT_TOPIC,                            // 7
+        LWT_CONNECTED,                        // 8
+        LWT_DISCONNECTED,                     // 9
+        board_config.mqtt_main_topic,         // 14
+        board_config.device_name,             // 15
+        app_desc->version,                    // 18
+        tmp);                                 // 19
+
+    if (unique_nbr) {
+        sprintf(tmp, ",\"unique_id\": \"%s-%s-%d\"", board_config.mqtt_main_topic, field, unique_nbr);
+        strcat(payload, tmp);
+              
+    }
+    else {
+        sprintf(tmp ,",\"unique_id\": \"%s-%s\"", board_config.mqtt_main_topic, field );
+        strcat(payload, tmp);
+    }
+
+    if (strlen(icon)) {
+        sprintf(tmp, ",\"icon\": \"%s\"", icon);
+        strcat(payload, tmp);
+    }
+
+    if (strlen(entity_category)) {
+        sprintf(tmp, ",\"entity_category\": \"%s\"", entity_category);
+        strcat(payload, tmp);
+    }
+}
+
+static void mqtt_confg_component(
     esp_mqtt_client_handle_t client,
     char* component,
     char* field,
@@ -158,47 +241,11 @@ static void mqtt_config_component(
     char payload[1000];
     char tmp[100];
     bool subscribe_topic = false;
-    const esp_app_desc_t* app_desc = esp_app_get_description();
-
-    wifi_get_ip(tmp);
 
     /* See https://www.home-assistant.io/docs/mqtt/discovery/ */
     sprintf(discovery_topic, "homeassistant/%s/%s/%s/config", component, board_config.mqtt_main_topic, field);
 
-    sprintf(payload, 
-        "{"                                                 // 0
-        "\"~\": \"%s\","                                    // 1
-        "\"unique_id\": \"%s-%s\","                         // 2
-        "\"object_id\": \"%s_%s\","                         // 3
-        "\"name\": \"%s\","                                 // 4
-        "\"icon\": \"%s\","                                 // 5
-        "\"state_topic\": \"~/%s\","                        // 6
-        "\"availability_topic\": \"~/%s\","                 // 7
-        "\"payload_available\": \"%s\","                    // 8
-        "\"payload_not_available\": \"%s\","                // 9
-        "\"force_update\": \"true\","                       // -
-        "\"device\": "                                      // 10
-          "{"                                               // 11
-              "\"identifiers\": [\"%s\"],"                  // 12
-              "\"name\": \"%s\","                           // 13
-              "\"model\": \"ESP32 EVSE\","                  // 14
-              "\"manufacturer\": \"OULWare\","              // 15
-              "\"sw_version\": \"%s\","                     // 16
-              "\"configuration_url\": \"http://%s\""        // 17
-          "}",                                              // 18
-        board_config.mqtt_main_topic,         // 1
-        board_config.mqtt_main_topic, field,  // 2
-        board_config.mqtt_main_topic, field,  // 3
-        name,                                 // 4
-        icon,                                 // 5
-        field,                                // 6
-        LWT_TOPIC,                            // 7
-        LWT_CONNECTED,                        // 8
-        LWT_DISCONNECTED,                     // 9
-        board_config.mqtt_main_topic,         // 12
-        board_config.device_name,             // 13
-        app_desc->version,                    // 16
-        tmp);                                 // 17
+    mqtt_config_common_part(payload, field, name, icon, entity_category, 0);
 
     if (strlen(unit)) {
         sprintf(tmp, ",\"unit_of_meas\": \"%s\"", unit);
@@ -214,11 +261,6 @@ static void mqtt_config_component(
         sprintf(tmp, ",\"state_class\": \"%s\"", state_class);
         strcat(payload, tmp);
     } 
-
-    if (strlen(entity_category)) {
-        sprintf(tmp, ",\"entity_category\": \"%s\"", entity_category);
-        strcat(payload, tmp);
-    }
 
     if ((strcmp(field, "switch") == 0) ||
         (strcmp(field, "select") == 0) ||
@@ -243,62 +285,255 @@ static void mqtt_config_component(
     }
 }
 
+static void mqtt_cfg_sensor(
+    esp_mqtt_client_handle_t client,
+    uint8_t group,
+    char* field,
+    char* name,
+    char* icon,
+    char* unit,
+    char* device_class,
+    char* state_class,
+    char* entity_category)
+{
+    char discovery_topic[64];
+    char payload[1000];
+    char tmp[100];
+
+    /* See https://www.home-assistant.io/docs/mqtt/discovery/ */
+    if (group) {
+        sprintf(discovery_topic, "homeassistant/sensor/%s/%s_%d/config", board_config.mqtt_main_topic, field, group);
+    }
+    else {
+        sprintf(discovery_topic, "homeassistant/sensor/%s/%s/config", board_config.mqtt_main_topic, field);
+    }
+
+    mqtt_config_common_part(payload, field, name, icon, entity_category, group);
+
+    if (strlen(unit)) {
+        sprintf(tmp, ",\"unit_of_meas\": \"%s\"", unit);
+        strcat(payload, tmp);
+    }
+
+    if (strlen(device_class)) {
+        sprintf(tmp, ",\"device_class\": \"%s\"", device_class);
+        strcat(payload, tmp);
+    }
+
+    if (strlen(state_class)) {
+        sprintf(tmp, ",\"state_class\": \"%s\"", state_class);
+        strcat(payload, tmp);
+    }
+
+    if (group) {
+        char name_mod[32];
+        strcpy(tmp, name);
+        strcpy(name_mod, strlwr(tmp));
+        replacechar(name_mod, ' ', '_');
+        sprintf(tmp, ",\"value_template\": \"{{ value_json.%s }}\"", name_mod);
+        strcat(payload, tmp);
+    } 
+
+    strcat(payload, "}");
+
+    if (board_config.mqtt_homeassistant_discovery) {
+      // One could say that it is bit unoptimal to build everything, but not use it...
+      // so there is room for optimization, but expecting this flag always be true, so this
+      // doesn't really matter ;)
+      esp_mqtt_client_publish(client, discovery_topic, payload, 0, /*qos*/1, /*retain*/1);
+    }
+}
+
+static void mqtt_cfg_number(
+    esp_mqtt_client_handle_t client,
+    char* field,
+    char* name,
+    char* icon,
+    char* unit,
+    char* device_class,
+    float min,
+    float max,
+    float step,
+    char* mode)
+{
+    char discovery_topic[64];
+    char payload[1000];
+    char tmp[100];
+
+    /* See https://www.home-assistant.io/docs/mqtt/discovery/ */
+    sprintf(discovery_topic, "homeassistant/number/%s/%s/config", board_config.mqtt_main_topic, field);
+
+    mqtt_config_common_part(payload, field, name, icon, "config", 0);
+
+    sprintf(tmp, ",\"command_topic\": \"~/%s/set\"", field);
+    strcat(payload, tmp);
+
+    sprintf(tmp, ",\"min\": \"%f\"", min);
+    strcat(payload, tmp);
+
+    sprintf(tmp, ",\"max\": \"%f\"", max);
+    strcat(payload, tmp);
+
+    sprintf(tmp, ",\"step\": \"%f\"", step);
+    strcat(payload, tmp);
+
+    if (strlen(mode)) {
+        sprintf(tmp, ",\"mode\": \"%s\"", mode);
+        strcat(payload, tmp);
+    }
+
+    if (strlen(unit)) {
+        sprintf(tmp, ",\"unit_of_meas\": \"%s\"", unit);
+        strcat(payload, tmp);
+    }
+
+    if (strlen(device_class)) {
+        sprintf(tmp, ",\"device_class\": \"%s\"", device_class);
+        strcat(payload, tmp);
+    }
+
+    strcat(payload, "}");
+
+    if (board_config.mqtt_homeassistant_discovery) {
+      // One could say that it is bit unoptimal to build everything, but not use it...
+      // so there is room for optimization, but expecting this flag always be true, so this
+      // doesn't really matter ;)
+      esp_mqtt_client_publish(client, discovery_topic, payload, 0, /*qos*/1, /*retain*/1);
+    }
+
+    sprintf(tmp, "%s/%s/set", board_config.mqtt_main_topic, field);
+    esp_mqtt_client_subscribe_single(client, tmp, /*qos*/0);
+}
+
+static void mqtt_cfg_select(
+    esp_mqtt_client_handle_t client,
+    char* field,
+    char* name,
+    char* icon,
+    char* options)
+{
+    char discovery_topic[64];
+    char payload[1000];
+    char tmp[100];
+
+    /* See https://www.home-assistant.io/docs/mqtt/discovery/ */
+    sprintf(discovery_topic, "homeassistant/select/%s/%s/config", board_config.mqtt_main_topic, field);
+
+    mqtt_config_common_part(payload, field, name, icon, "config", 0);
+
+    sprintf(tmp, ",\"command_topic\": \"~/%s/set\"", field);
+    strcat(payload, tmp);
+
+    sprintf(tmp, ",\"options\": [ %s ]", options);
+    strcat(payload, tmp);
+
+    strcat(payload, "}");
+
+    if (board_config.mqtt_homeassistant_discovery) {
+      // One could say that it is bit unoptimal to build everything, but not use it...
+      // so there is room for optimization, but expecting this flag always be true, so this
+      // doesn't really matter ;)
+      esp_mqtt_client_publish(client, discovery_topic, payload, 0, /*qos*/1, /*retain*/1);
+    }
+
+    sprintf(tmp, "%s/%s/set", board_config.mqtt_main_topic, field);
+    esp_mqtt_client_subscribe_single(client, tmp, /*qos*/0);
+}
+
+static void mqtt_cfg_switch(
+    esp_mqtt_client_handle_t client,
+    char* field,
+    char* name,
+    char* icon,
+    char* device_class,
+    char* state_on,
+    char* state_off)
+{
+    char discovery_topic[64];
+    char payload[1000];
+    char tmp[100];
+
+    /* See https://www.home-assistant.io/docs/mqtt/discovery/ */
+    sprintf(discovery_topic, "homeassistant/switch/%s/%s/config", board_config.mqtt_main_topic, field);
+
+    mqtt_config_common_part(payload, field, name, icon, "", 0);
+
+    sprintf(tmp, ",\"command_topic\": \"~/%s/set\"", field);
+    strcat(payload, tmp);
+
+    if (strlen(device_class)) {
+        sprintf(tmp, ",\"device_class\": \"%s\"", device_class);
+        strcat(payload, tmp);
+    }
+
+    if (strlen(state_on)) {
+        sprintf(tmp, ",\"state_on\": \"%s\"", state_on);
+        strcat(payload, tmp);
+    }
+
+    if (strlen(state_off)) {
+        sprintf(tmp, ",\"state_off\": \"%s\"", state_off);
+        strcat(payload, tmp);
+    }
+
+    strcat(payload, "}");
+
+    if (board_config.mqtt_homeassistant_discovery) {
+      // One could say that it is bit unoptimal to build everything, but not use it...
+      // so there is room for optimization, but expecting this flag always be true, so this
+      // doesn't really matter ;)
+      esp_mqtt_client_publish(client, discovery_topic, payload, 0, /*qos*/1, /*retain*/1);
+    }
+
+    sprintf(tmp, "%s/%s/set", board_config.mqtt_main_topic, field);
+    esp_mqtt_client_subscribe_single(client, tmp, /*qos*/0);
+}
+
 static void mqtt_subscribe_send_ha_discovery(esp_mqtt_client_handle_t client) {
 
-    //                          component | Field   | User Friendly Name           | Icon                          | Unit | Device Class        | State Class       | Entity Category
-    mqtt_config_component(client, "sensor", "rbt"   , "Uptime"                     , "mdi:clock-time-eight-outline", "s"  , ""                  , ""                , "diagnostic");
-    mqtt_config_component(client, "sensor", "mac"   , "MAC Address"                , "mdi:network-outline"         , ""   , ""                  , ""                , "diagnostic");
-    mqtt_config_component(client, "sensor", "ip"    , "IP Adress"                  , "mdi:network-outline"         , ""   , ""                  , ""                , "diagnostic");
-    mqtt_config_component(client, "sensor", "fme"   , "Free Heap Memory"           , "mdi:memory"                  , "B"  , ""                  , "measurement"     , "diagnostic");
-    mqtt_config_component(client, "sensor", "rssi"  , "Wi-Fi RSSI"                 , "mdi:wifi"                    , "dBm", "signal_strength"   , "measurement"     , "diagnostic");
-    mqtt_config_component(client, "sensor", "tmc"   , "CPU Temperature"            , "mdi:thermometer"             , "°C" , "temperature"       , "measurement"     , "diagnostic");
+    // System Sensors:  Group| Field   | User Friendly Name           | Icon                          | Unit | Device Class        | State Class       | Entity category
+    mqtt_cfg_sensor(client, 0, "rbt"   , "Uptime"                     , "mdi:clock-time-eight-outline", "s"  , ""                  , ""                , "diagnostic");
+    mqtt_cfg_sensor(client, 0, "mac"   , "MAC Address"                , "mdi:network-outline"         , ""   , ""                  , ""                , "diagnostic");
+    mqtt_cfg_sensor(client, 0, "ip"    , "IP Adress"                  , "mdi:network-outline"         , ""   , ""                  , ""                , "diagnostic");
+    mqtt_cfg_sensor(client, 0, "fme"   , "Free Heap Memory"           , "mdi:memory"                  , "B"  , ""                  , "measurement"     , "diagnostic");
+    mqtt_cfg_sensor(client, 0, "rssi"  , "Wi-Fi RSSI"                 , "mdi:wifi"                    , "dBm", "signal_strength"   , "measurement"     , "diagnostic");
+    mqtt_cfg_sensor(client, 0, "tmc"   , "CPU Temperature"            , "mdi:thermometer"             , "°C" , "temperature"       , "measurement"     , "diagnostic");
 
+    // EVSE Sensors:    Group| Field   | User Friendly Name           | Icon                          | Unit | Device Class        | State Class       | Entity category
+    mqtt_cfg_sensor(client, 0, "acs"   , "Card authorization required", ""                            , ""   , ""                  , ""                , "");
+    mqtt_cfg_sensor(client, 0, "cbl"   , "Cable maximum current"      , ""                            , "A"  , "current"           , "measurement"     , "");
+    mqtt_cfg_sensor(client, 0, "ccs"   , "Current charger state"      , "mdi:auto-fix"                , ""   , ""                  , ""                , "");
+    mqtt_cfg_sensor(client, 0, "cdi"   , "Charging duration"          , "mdi:timer-outline"           , "s"  , ""                  , "measurement"     , "");
+    mqtt_cfg_sensor(client, 0, "err"   , "Error code"                 , "mdi:alert-circle-outline"    , ""   , ""                  , ""                , "");
+    mqtt_cfg_sensor(client, 0, "eto"   , "Total energy"               , ""                            , "Wh" , "energy"            , "total_increasing", "");
+    mqtt_cfg_sensor(client, 0, "lck"   , "Effective lock setting"     , ""                            , ""   , ""                  , "measurement"     , "");
+    mqtt_cfg_sensor(client, 0, "lst"   , "Last session time"          , "mdi:counter"                 , "s"  , ""                  , "measurement"     , "");
+    mqtt_cfg_sensor(client, 1, "nrg"   , "Voltage L1"                 , ""                            , "V"  , "voltage"           , "measurement"     , "");
+    mqtt_cfg_sensor(client, 2, "nrg"   , "Voltage L2"                 , ""                            , "V"  , "voltage"           , "measurement"     , "");
+    mqtt_cfg_sensor(client, 3, "nrg"   , "Voltage L3"                 , ""                            , "V"  , "voltage"           , "measurement"     , "");
+    mqtt_cfg_sensor(client, 4, "nrg"   , "Current L1"                 , ""                            , "A"  , "current"           , "measurement"     , "");
+    mqtt_cfg_sensor(client, 5, "nrg"   , "Current L2"                 , ""                            , "A"  , "current"           , "measurement"     , "");
+    mqtt_cfg_sensor(client, 6, "nrg"   , "Current L3"                 , ""                            , "A"  , "current"           , "measurement"     , "");
+    mqtt_cfg_sensor(client, 7, "nrg"   , "Current power"              , ""                            , "W"  , "power"             , "measurement"     , "");
+    mqtt_cfg_sensor(client, 0, "rcd"   , "Residual current detection" , ""                            , ""   , ""                  , "measurement"     , "");
+    mqtt_cfg_sensor(client, 0, "status", "Status"                     , "mdi:heart-pulse"             , ""   , ""                  , ""                , "");
+    mqtt_cfg_sensor(client, 0, "tma_0" , "Temperature sensor 1"       , ""                            , "°C" , "temperature"       , "measurement"     , "");
+    mqtt_cfg_sensor(client, 0, "tma_1" , "Temperature sensor 2"       , ""                            , "°C" , "temperature"       , "measurement"     , "");
 
-    mqtt_config_component(client, "sensor", "acs"   , "Card authorization required", ""                            , ""   , ""                  , ""                , "diagnostic");
-#if 0
-    mqtt_config_component(client, "number", "ama"   , "Maximum current limit"      , ""                            , "A"  , "current"           , "measurement"     , ""          );
-    mqtt_config_component(client, "number", "amp"   , "Requested current"          , ""                            , "A"  , "current"           , ""                , "config"    );
-    mqtt_config_component(client, "number", "amt"   , "Current temperature limit"  , ""                            , "°C" , "temperature"       , "measurement"     , "diagnostic");
-    mqtt_config_component(client, "number", "ate"   , "Automatic stop energy"      , ""                            , "Wh" , "energy"            , "total_increasing", ""          );
-    mqtt_config_component(client, "number", "att"   , "Automatic stop time"        , "mdi:timer-outline"           , "s"  , ""                  , "measurement"     , ""          );
-#endif
-#if 0
-    mqtt_config_component(client, "sensor", "cbl"   , "Cable maximum current"      , ""                            , "A"  , "current"           , "measurement"     , "diagnostic");
-    mqtt_config_component(client, "sensor", "ccs"   , "Current charger state"      , "mdi:auto-fix"                , ""   , ""                  , ""                , "diagnostic");
-    mqtt_config_component(client, "sensor", "cdi"   , "Charging duration"          , "mdi:timer-outline"           , "s"  , ""                  , "measurement"     , "diagnostic");
-#endif
-#if 0
-    mqtt_config_component(client, "select", "emm"   , "Energy meter mode"          , "mdi:meter-electric"          , ""   , ""                  , ""                , "config"    );
-    mqtt_config_component(client, "sensor", "err"   , "Error code"                 , "mdi:alert-circle-outline"    , ""   , ""                  , ""                , "diagnostic");
-    mqtt_config_component(client, "sensor", "eto"   , "Total energy"               , ""                            , "Wh" , "energy"            , "total_increasing", "diagnostic");
-#endif
-#if 0
-    mqtt_config_component(client, "sensor", "lck"   , "Effective lock setting"     , ""                            , ""   , ""                  , "measurement"     , "diagnostic");
-    mqtt_config_component(client, "sensor", "lst"   , "Last session time"          , "mdi:counter"                 , "s"  , ""                  , "measurement"     , "diagnostic");
-    mqtt_config_component(client, "sensor", "nrg_0" , "Voltage L1"                 , ""                            , "V"  , "voltage"           , "measurement"     , "diagnostic");
-    mqtt_config_component(client, "sensor", "nrg_1" , "Voltage L2"                 , ""                            , "V"  , "voltage"           , "measurement"     , "diagnostic");
-    mqtt_config_component(client, "sensor", "nrg_2" , "Voltage L3"                 , ""                            , "V"  , "voltage"           , "measurement"     , "diagnostic");
-    mqtt_config_component(client, "sensor", "nrg_3" , "Voltage N"                  , ""                            , "V"  , "voltage"           , "measurement"     , "diagnostic");
-    mqtt_config_component(client, "sensor", "nrg_4" , "Current L1"                 , ""                            , "A"  , "current"           , "measurement"     , "diagnostic");
-    mqtt_config_component(client, "sensor", "nrg_5" , "Current L2"                 , ""                            , "A"  , "current"           , "measurement"     , "diagnostic");
-    mqtt_config_component(client, "sensor", "nrg_6" , "Current L3"                 , ""                            , "A"  , "current"           , "measurement"     , "diagnostic");
-    mqtt_config_component(client, "sensor", "nrg_7" , "Power L1"                   , ""                            , "W"  , "power"             , "measurement"     , "diagnostic");
-    mqtt_config_component(client, "sensor", "nrg_8" , "Power L2"                   , ""                            , "W"  , "power"             , "measurement"     , "diagnostic");
-    mqtt_config_component(client, "sensor", "nrg_9" , "Power L3"                   , ""                            , "W"  , "power"             , "measurement"     , "diagnostic");
-    mqtt_config_component(client, "sensor", "nrg_10", "Power N"                    , ""                            , "W"  , "power"             , "measurement"     , "diagnostic");
-    mqtt_config_component(client, "sensor", "nrg_11", "Current power"              , ""                            , "W"  , "power"             , "measurement"     , "diagnostic");
-    mqtt_config_component(client, "sensor", "nrg_12", "Power factor L1"            , ""                            , "%"  , "power_factor"      , "measurement"     , "diagnostic");
-    mqtt_config_component(client, "sensor", "nrg_13", "Power factor L2"            , ""                            , "%"  , "power_factor"      , "measurement"     , "diagnostic");
-    mqtt_config_component(client, "sensor", "nrg_14", "Power factor L3"            , ""                            , "%"  , "power_factor"      , "measurement"     , "diagnostic");
-    mqtt_config_component(client, "sensor", "nrg_15", "Power factor N"             , ""                            , "%"  , "power_factor"      , "measurement"     , "diagnostic");
-    mqtt_config_component(client, "sensor", "rcd"   , "Residual current detection" , ""                            , ""   , ""                  , "measurement"     , "diagnostic");
-#endif
-#if 0
-    mqtt_config_component(client, "select", "scs"   , "Set charger state"          , "mdi:auto-fix"                , ""   , ""                  , ""                , "config"    );
-    mqtt_config_component(client, "sensor", "status", "Status"                     , "mdi:heart-pulse"             , ""   , ""                  , ""                , "diagnostic");
-    mqtt_config_component(client, "sensor", "tma_0" , "Temperature sensor 1"       , ""                            , "°C" , "temperature"       , "measurement"     , "diagnostic");
-    mqtt_config_component(client, "sensor", "tma_1" , "Temperature sensor 2"       , ""                            , "°C" , "temperature"       , "measurement"     , "diagnostic");
-#endif
+    // Numbers:             Field| User Friendly Name         | Icon               | Unit | Device Class | Min| Max| Step| Mode
+    mqtt_cfg_number(client, "ama", "Maximum charging current" , ""                 , "A"  , "current"    , 6  , 32 , 1   , "box"   );
+    mqtt_cfg_number(client, "amp", "Charging current"         , ""                 , "A"  , "current"    , 6  , 32 , 1   , "slider");
+    mqtt_cfg_number(client, "amt", "Temperature threshold"    , ""                 , "°C ", "temperature", 40 , 80 , 1   , "box"   );
+    mqtt_cfg_number(client, "ate", "Consumption limit"        , ""                 , "kWh", "energy"     , 0  , 50 , 1   , "slider");
+    mqtt_cfg_number(client, "att", "Charging time limit"      , "mdi:timer-outline", "min", ""           , 0  , 300, 5   , "slider");
+    mqtt_cfg_number(client, "upl", "Under power limit"        , ""                 , "kWh", "energy"     , 0  , 10 , 0.01, "slider");
+    mqtt_cfg_number(client, "acv", "AC Voltage"               , ""                 , "V"  , "voltage"    , 100, 300, 1   , "box"   );
+
+    // Select:              Field | User Friendly Name | Icon                | Options
+    mqtt_cfg_select(client, "emm" , "Energy meter mode", "mdi:meter-electric", "\"Dummy single phase\",\"Dummy three phase\",\"Current sensing\",\"Current and voltage sensing\"");
+
+    // Switch:              Field| User Friendly Name  | Icon          | Device Class| State On | State Off
+    mqtt_cfg_switch(client, "scs", "Set charger state" , "mdi:auto-fix", ""          , "Charge" , "Don't Charge");
 }
 
 
@@ -588,5 +823,3 @@ void mqtt_init(void)
         xTaskCreate(mqtt_task_func, "mqtt_task", 1024*2, NULL, 6, &mqtt_task);
     }
 }
-
-
