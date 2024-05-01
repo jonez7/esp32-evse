@@ -500,13 +500,11 @@ static void mqtt_subscribe_send_ha_discovery(esp_mqtt_client_handle_t client) {
     mqtt_cfg_sensor(client, 0, "tmc"   , "CPU Temperature"            , "mdi:thermometer"             , "°C" , "temperature"       , "measurement"     , "diagnostic");
 
     // EVSE Sensors:    Group| Field   | User Friendly Name           | Icon                          | Unit | Device Class        | State Class       | Entity category
-    mqtt_cfg_sensor(client, 0, "acs"   , "Card authorization required", ""                            , ""   , ""                  , ""                , "");
     mqtt_cfg_sensor(client, 0, "cbl"   , "Cable maximum current"      , ""                            , "A"  , "current"           , "measurement"     , "");
     mqtt_cfg_sensor(client, 0, "ccs"   , "Current charger state"      , "mdi:auto-fix"                , ""   , ""                  , ""                , "");
     mqtt_cfg_sensor(client, 0, "cdi"   , "Charging duration"          , "mdi:timer-outline"           , "s"  , ""                  , "measurement"     , "");
     mqtt_cfg_sensor(client, 0, "err"   , "Error code"                 , "mdi:alert-circle-outline"    , ""   , ""                  , ""                , "");
     mqtt_cfg_sensor(client, 0, "eto"   , "Total energy"               , ""                            , "Wh" , "energy"            , "total_increasing", "");
-    mqtt_cfg_sensor(client, 0, "lck"   , "Effective lock setting"     , ""                            , ""   , ""                  , "measurement"     , "");
     mqtt_cfg_sensor(client, 0, "lst"   , "Last session time"          , "mdi:counter"                 , "s"  , ""                  , "measurement"     , "");
     mqtt_cfg_sensor(client, 1, "nrg"   , "Voltage L1"                 , ""                            , "V"  , "voltage"           , "measurement"     , "");
     mqtt_cfg_sensor(client, 2, "nrg"   , "Voltage L2"                 , ""                            , "V"  , "voltage"           , "measurement"     , "");
@@ -515,14 +513,14 @@ static void mqtt_subscribe_send_ha_discovery(esp_mqtt_client_handle_t client) {
     mqtt_cfg_sensor(client, 5, "nrg"   , "Current L2"                 , ""                            , "A"  , "current"           , "measurement"     , "");
     mqtt_cfg_sensor(client, 6, "nrg"   , "Current L3"                 , ""                            , "A"  , "current"           , "measurement"     , "");
     mqtt_cfg_sensor(client, 7, "nrg"   , "Current power"              , ""                            , "W"  , "power"             , "measurement"     , "");
-    mqtt_cfg_sensor(client, 0, "rcd"   , "Residual current detection" , ""                            , ""   , ""                  , "measurement"     , "");
+    mqtt_cfg_sensor(client, 0, "rcd"   , "Residual current detection" , "mdi:current-dc"              , ""   , ""                  , ""                , "");
     mqtt_cfg_sensor(client, 0, "status", "Status"                     , "mdi:heart-pulse"             , ""   , ""                  , ""                , "");
-    mqtt_cfg_sensor(client, 0, "tma_0" , "Temperature sensor 1"       , ""                            , "°C" , "temperature"       , "measurement"     , "");
-    mqtt_cfg_sensor(client, 0, "tma_1" , "Temperature sensor 2"       , ""                            , "°C" , "temperature"       , "measurement"     , "");
+    mqtt_cfg_sensor(client, 1, "tma"   , "Temperature sensor 1"       , ""                            , "°C" , "temperature"       , "measurement"     , "");
+    mqtt_cfg_sensor(client, 2, "tma"   , "Temperature sensor 2"       , ""                            , "°C" , "temperature"       , "measurement"     , "");
 
     // Numbers:             Field| User Friendly Name         | Icon               | Unit | Device Class | Min| Max| Step| Mode
     mqtt_cfg_number(client, "ama", "Maximum charging current" , ""                 , "A"  , "current"    , 6  , 32 , 1   , "box"   );
-    mqtt_cfg_number(client, "amp", "Charging current"         , ""                 , "A"  , "current"    , 6  , 32 , 1   , "slider");
+    mqtt_cfg_number(client, "amp", "Charging current"         , ""                 , "A"  , "current"    , 6  , 32 , 0.1 , "slider");
     mqtt_cfg_number(client, "amt", "Temperature threshold"    , ""                 , "°C ", "temperature", 40 , 80 , 1   , "box"   );
     mqtt_cfg_number(client, "ate", "Consumption limit"        , ""                 , "kWh", "energy"     , 0  , 50 , 1   , "slider");
     mqtt_cfg_number(client, "att", "Charging time limit"      , "mdi:timer-outline", "min", ""           , 0  , 300, 5   , "slider");
@@ -532,10 +530,12 @@ static void mqtt_subscribe_send_ha_discovery(esp_mqtt_client_handle_t client) {
     // Select:              Field | User Friendly Name | Icon                | Options
     mqtt_cfg_select(client, "emm" , "Energy meter mode", "mdi:meter-electric", "\"Dummy single phase\",\"Dummy three phase\",\"Current sensing\",\"Current and voltage sensing\"");
 
-    // Switch:              Field| User Friendly Name  | Icon          | Device Class| State On | State Off
-    mqtt_cfg_switch(client, "scs", "Set charger state" , "mdi:auto-fix", ""          , "Charge" , "Don't Charge");
-}
+    // Switch:              Field| User Friendly Name           | Icon          | Device Class| State On | State Off
+    mqtt_cfg_switch(client, "scs", "Set charger state"          , "mdi:auto-fix", ""          , "Charge" , "Don't Charge");
+    mqtt_cfg_switch(client, "acs", "Card authorization required", ""            , "outlet"    , "Enabled", "Disbaled"    );
+    mqtt_cfg_switch(client, "lck", "Socket lock"                , ""            , "switch"    , "Enabled", "Disbaled"    );
 
+}
 
 static void mqtt_publish_static_data(esp_mqtt_client_handle_t client) {
 
@@ -586,137 +586,163 @@ static void mqtt_publish_system_data(esp_mqtt_client_handle_t client) {
   esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
 }
 
-static void mqtt_publish_sensor_data(esp_mqtt_client_handle_t client) {
+static void mqtt_publish_evse_sensor_data(esp_mqtt_client_handle_t client) {
 
   char topic[64];
-  char payload[64];
-  static uint8_t foo=0;
+  char payload[512];
+  char tmp[64];
 
-  // Card authorization required
-  sprintf(topic, "%s/acs", board_config.mqtt_main_topic);
-  sprintf(payload, "%d", foo++);//evse_is_pending_auth());
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
-  ESP_LOGI(TAG, "1");
-#if 0
-  // Maximum current limit
-  sprintf(topic, "%s/ama", board_config.mqtt_main_topic);
-  sprintf(payload, "%d", evse_get_max_charging_current());
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
-  ESP_LOGI(TAG, "2");
-  // Requested current
-  sprintf(topic, "%s/amp", board_config.mqtt_main_topic);
-  sprintf(payload, "%d", evse_get_charging_current());
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
-  ESP_LOGI(TAG, "3");
-  // Current temperature limit
-  sprintf(topic, "%s/amt", board_config.mqtt_main_topic);
-  sprintf(payload, "%d", evse_get_temp_threshold());
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
-  ESP_LOGI(TAG, "4");
-  // Automatic stop energy
-  sprintf(topic, "%s/ate", board_config.mqtt_main_topic);
-  sprintf(payload, "%ld", evse_get_default_consumption_limit());
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
-  ESP_LOGI(TAG, "5");
-  // Automatic stop time
-  sprintf(topic, "%s/att", board_config.mqtt_main_topic);
-  sprintf(payload, "%ld", evse_get_default_charging_time_limit());
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
-  ESP_LOGI(TAG, "6");
+ESP_LOGI(TAG, "<START");
   // Cable maximum current
   sprintf(topic, "%s/cbl", board_config.mqtt_main_topic);
-  sprintf(payload, "%d", 0);//proximity_get_max_current());
+  sprintf(payload, "%d", proximity_get_max_current());
   esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
-  ESP_LOGI(TAG, "7");
+ESP_LOGI(TAG, "1");
   // Current charger state
   sprintf(topic, "%s/ccs", board_config.mqtt_main_topic);
-  sprintf(payload, "%d", evse_is_enabled());
+  sprintf(payload, "%s", (evse_is_enabled()? "Charging enabled":"Charging Disabled") );
   esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
-  ESP_LOGI(TAG, "8");
+ESP_LOGI(TAG, "2");
   // Charging duration
   sprintf(topic, "%s/cdi", board_config.mqtt_main_topic);
   sprintf(payload, "%ld", energy_meter_get_charging_time());
   esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
-  ESP_LOGI(TAG, "9");
-  // Energy meter mode
-  sprintf(topic, "%s/emm", board_config.mqtt_main_topic);
-  sprintf(payload, "%d", energy_meter_get_mode());
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
-  ESP_LOGI(TAG, "10");
+ESP_LOGI(TAG, "3");
   // Error code
   sprintf(topic, "%s/err", board_config.mqtt_main_topic);
   sprintf(payload, "%ld", evse_get_error());
   esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
-  ESP_LOGI(TAG, "11");
+ESP_LOGI(TAG, "4");
   // Total energy
   sprintf(topic, "%s/eto", board_config.mqtt_main_topic);
   sprintf(payload, "%ld", energy_meter_get_consumption());
   esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
-  ESP_LOGI(TAG, "12");
-  // Effective lock setting
-  sprintf(topic, "%s/lck", board_config.mqtt_main_topic);
-  sprintf(payload, "%d", socket_lock_is_detection_high());
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
-  ESP_LOGI(TAG, "13");
+ESP_LOGI(TAG, "5");
   // Last session time
   sprintf(topic, "%s/lst", board_config.mqtt_main_topic);
   sprintf(payload, "%ld", energy_meter_get_session_time());
   esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
-  ESP_LOGI(TAG, "14");
-  // Voltage L1
-  sprintf(topic, "%s/nrg_0", board_config.mqtt_main_topic);
-  sprintf(payload, "%f", energy_meter_get_l1_voltage());
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
-  ESP_LOGI(TAG, "15");
-  // Voltage L2
-  sprintf(topic, "%s/nrg_1", board_config.mqtt_main_topic);
-  sprintf(payload, "%f", energy_meter_get_l2_voltage());
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
-  ESP_LOGI(TAG, "16");
-  // Voltage L3
-  sprintf(topic, "%s/nrg_2", board_config.mqtt_main_topic);
-  sprintf(payload, "%f", energy_meter_get_l3_voltage());
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
-  ESP_LOGI(TAG, "17");
-  // Current L1
-  sprintf(topic, "%s/nrg_4", board_config.mqtt_main_topic);
-  sprintf(payload, "%f", energy_meter_get_l1_current());
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
-  ESP_LOGI(TAG, "18");
-  // Current L2
-  sprintf(topic, "%s/nrg_5", board_config.mqtt_main_topic);
-  sprintf(payload, "%f", energy_meter_get_l2_current());
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
-  ESP_LOGI(TAG, "19");
-  // Current L3
-  sprintf(topic, "%s/nrg_6", board_config.mqtt_main_topic);
-  sprintf(payload, "%f", energy_meter_get_l3_current());
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
-  ESP_LOGI(TAG, "20");
+ESP_LOGI(TAG, "6");
+  // Measuremnt statistics
+  sprintf(topic, "%s/nrg", board_config.mqtt_main_topic);
+  sprintf(payload, "{");
+  // Voltage L1 / L2 / L3
+  sprintf(tmp, "\"voltage_l1\":%f,", energy_meter_get_l1_voltage());
+  strcat(payload, tmp);
+  sprintf(tmp, "\"voltage_l2\":%f,", energy_meter_get_l2_voltage());
+  strcat(payload, tmp);
+  sprintf(tmp, "\"voltage_l3\":%f,", energy_meter_get_l3_voltage());
+  strcat(payload, tmp);
+  // Current L1 / L2 /L3
+  sprintf(tmp, "\"current_l1\":%f,", energy_meter_get_l1_current());
+  strcat(payload, tmp);
+  sprintf(tmp, "\"current_l2\":%f,", energy_meter_get_l2_current());
+  strcat(payload, tmp);
+  sprintf(tmp, "\"current_l3\":%f,", energy_meter_get_l3_current());
+  strcat(payload, tmp);
   // Current power
-  sprintf(topic, "%s/nrg_11", board_config.mqtt_main_topic);
-  sprintf(payload, "%d", energy_meter_get_power());
+  sprintf(tmp, "\"current_power\":%f}", energy_meter_get_l3_current());
+  strcat(payload, tmp);
   esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
-  ESP_LOGI(TAG, "21");
+
   // Residual current detection
   sprintf(topic, "%s/rcd", board_config.mqtt_main_topic);
-  sprintf(payload, "%d", evse_is_rcm());
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
-  ESP_LOGI(TAG, "22");
-  // Set charger state
-  sprintf(topic, "%s/scs", board_config.mqtt_main_topic);
-  sprintf(payload, "%d", evse_is_enabled());
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
-  ESP_LOGI(TAG, "23");
+  sprintf(payload, "%s", (evse_is_rcm()?"Detected":"Not detected"));
+  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1); ///=>> Binary_Sensor!!!!
+
   // Status
   sprintf(topic, "%s/status", board_config.mqtt_main_topic);
   sprintf(payload, "%s", evse_state_to_str(evse_get_state()));
   esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
-  ESP_LOGI(TAG, "24");
-  //sprintf(topic, "%s/tma", board_config.mqtt_main_topic);
-  //sprintf(payload, "%d", temp_sensor_get_temperatures(int16_t* curr_temps););
-  //esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
-#endif
+
+  // Temperature sensors
+  sprintf(topic, "%s/tma", board_config.mqtt_main_topic);
+  sprintf(payload, "{");
+  int16_t curr_temps[2] = { 0 };
+  uint8_t i;
+  temp_sensor_get_temperatures(curr_temps);
+  for (i=1 ; i < ARRAY_SIZE(curr_temps); i++)
+  {
+    sprintf(tmp, "\"temperature_sensor_%d\":%d,", i, curr_temps[i-1]);
+    strcat(payload, tmp);
+  }
+  sprintf(tmp, "\"temperature_sensor_%d\":%d}", i, curr_temps[i-1]);
+  strcat(payload, tmp);
+  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+  ESP_LOGI(TAG, ">END");
+}
+
+static void mqtt_publish_evse_number_data(esp_mqtt_client_handle_t client) {
+
+  char topic[64];
+  char payload[512];
+
+  // Maximum current limit
+  sprintf(topic, "%s/ama", board_config.mqtt_main_topic);
+  sprintf(payload, "%d", evse_get_max_charging_current());
+  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+
+  // Requested current
+  sprintf(topic, "%s/amp", board_config.mqtt_main_topic);
+  sprintf(payload, "%f", evse_get_charging_current()/10.0);
+  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+
+  // Current temperature limit
+  sprintf(topic, "%s/amt", board_config.mqtt_main_topic);
+  sprintf(payload, "%d", evse_get_temp_threshold());
+  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+
+  // Automatic stop energy
+  sprintf(topic, "%s/ate", board_config.mqtt_main_topic);
+  sprintf(payload, "%f", evse_get_default_consumption_limit()/1000.0);
+  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+
+  // Automatic stop time
+  sprintf(topic, "%s/att", board_config.mqtt_main_topic);
+  sprintf(payload, "%f", evse_get_default_charging_time_limit()/60.0);
+  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+
+  // Under power limit
+  sprintf(topic, "%s/upl", board_config.mqtt_main_topic);
+  sprintf(payload, "%f", evse_get_default_under_power_limit()/1000.0);
+  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+
+  // AC Voltage
+  sprintf(topic, "%s/acv", board_config.mqtt_main_topic);
+  sprintf(payload, "%d", energy_meter_get_ac_voltage());
+  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+}
+
+static void mqtt_publish_evse_select_data(esp_mqtt_client_handle_t client) {
+
+  char topic[64];
+  char payload[512];
+
+  // Energy meter mode
+  sprintf(topic, "%s/emm", board_config.mqtt_main_topic);
+  sprintf(payload, "%s", energy_meter_mode_to_str_mqtt(energy_meter_get_mode()));
+  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+}
+
+static void mqtt_publish_evse_switch_data(esp_mqtt_client_handle_t client) {
+
+  char topic[64];
+  char payload[512];
+
+  // Set charger state
+  sprintf(topic, "%s/scs", board_config.mqtt_main_topic);
+  sprintf(payload, "%d", evse_is_enabled());
+  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+
+  // Card authorization required
+  sprintf(topic, "%s/acs", board_config.mqtt_main_topic);
+  sprintf(payload, "%d", evse_is_pending_auth());
+  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+
+  // Effective lock setting
+  sprintf(topic, "%s/lck", board_config.mqtt_main_topic);
+  sprintf(payload, "%d", socket_lock_is_detection_high());
+  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
 }
 
 static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_t event_id, void* event_data)
@@ -730,6 +756,10 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
         mqtt_subscribe_send_ha_discovery(client);
         mqtt_publish_static_data(client);
         mqtt_publish_system_data(client);
+        mqtt_publish_evse_sensor_data(client);
+        mqtt_publish_evse_number_data(client);
+        mqtt_publish_evse_select_data(client);
+        mqtt_publish_evse_switch_data(client);
         break;
     case MQTT_EVENT_DISCONNECTED:
         ESP_LOGI(TAG, "MQTT Disconnected");
@@ -802,7 +832,10 @@ static void mqtt_task_func(void* param)
         if (!static_data_publish_counter) {
             mqtt_publish_system_data(client);
             static_data_publish_counter = 10;
-            mqtt_publish_sensor_data(client);
+            mqtt_publish_evse_sensor_data(client);
+            mqtt_publish_evse_number_data(client);
+            mqtt_publish_evse_select_data(client);
+            mqtt_publish_evse_switch_data(client);
         }
     }
 }
@@ -820,6 +853,6 @@ void mqtt_init(void)
     if (board_config.mqtt) {
         sprintf(lwt_topic, "%s/%s", board_config.mqtt_main_topic, LWT_TOPIC);
         ESP_LOGI(TAG, "Starting MQTT task");
-        xTaskCreate(mqtt_task_func, "mqtt_task", 1024*2, NULL, 6, &mqtt_task);
+        xTaskCreate(mqtt_task_func, "mqtt_task", 4*1024, NULL, 11, &mqtt_task);
     }
 }

@@ -192,4 +192,20 @@ const char* energy_meter_mode_to_str(energy_meter_mode_t mode);
  */
 energy_meter_mode_t energy_meter_str_to_mode(const char* str);
 
+/**
+ * @brief Serialize to string
+ * 
+ * @param mode 
+ * @return const char* 
+ */
+const char* energy_meter_mode_to_str_mqtt(energy_meter_mode_t mode);
+
+/**
+ * @brief Parse from string
+ * 
+ * @param str 
+ * @return energy_meter_mode_t 
+ */
+energy_meter_mode_t energy_meter_str_to_mode_mqtt(const char* str);
+
 #endif /* ENERGY_METER_H_ */
