@@ -540,3 +540,27 @@ energy_meter_mode_t energy_meter_str_to_mode(const char* str)
     }
     return ENERGY_METER_MODE_DUMMY;
 }
+
+const char* energy_meter_mode_to_str_mqtt(energy_meter_mode_t mode)
+{
+    switch (mode)
+    {
+    case ENERGY_METER_MODE_CUR:
+        return "Current sensing";
+    case ENERGY_METER_MODE_CUR_VLT:
+        return "Current and voltage sensing";
+    default:
+        return "Dummy";
+    }
+}
+
+energy_meter_mode_t energy_meter_str_to_mode_mqtt(const char* str)
+{
+    if (!strcmp(str, "Current sensing")) {
+        return ENERGY_METER_MODE_CUR;
+    }
+    if (!strcmp(str, "Current and voltage sensing")) {
+        return ENERGY_METER_MODE_CUR_VLT;
+    }
+    return ENERGY_METER_MODE_DUMMY;
+}
