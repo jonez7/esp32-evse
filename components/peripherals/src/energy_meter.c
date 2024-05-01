@@ -502,3 +502,32 @@ energy_meter_mode_t energy_meter_str_to_mode(const char* str)
     }
     return ENERGY_METER_MODE_DUMMY_SINGLE_PHASE;
 }
+
+const char* energy_meter_mode_to_str_mqtt(energy_meter_mode_t mode)
+{
+    switch (mode)
+    {
+    case ENERGY_METER_MODE_CUR:
+        return "Current sensing";
+    case ENERGY_METER_MODE_CUR_VLT:
+        return "Current and voltage sensing";
+    case ENERGY_METER_MODE_DUMMY_THREE_PHASE:
+        return "Dummy three phase";
+    default:
+        return "Dummy single phase";
+    }
+}
+
+energy_meter_mode_t energy_meter_str_to_mode_mqtt(const char* str)
+{
+    if (!strcmp(str, "Current sensing")) {
+        return ENERGY_METER_MODE_CUR;
+    }
+    if (!strcmp(str, "Current and voltage sensing")) {
+        return ENERGY_METER_MODE_CUR_VLT;
+    }
+    if (!strcmp(str, "Dummy three phase")) {
+        return ENERGY_METER_MODE_DUMMY_THREE_PHASE;
+    }
+    return ENERGY_METER_MODE_DUMMY_SINGLE_PHASE;
+}
