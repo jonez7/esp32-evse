@@ -90,4 +90,12 @@ void socket_lock_set_locked(bool locked);
  */
 socket_lock_status_t socket_lock_get_status(void);
 
+/**
+ * @brief Format to string value
+ *
+ * @param status
+ * @return const char
+ */
+const char * socket_lock_status_to_str(socket_lock_status_t status);
+
 #endif /* SOCKED_LOCK_H_ */
