@@ -1,5 +1,6 @@
 #include <sys/param.h>
 #include <math.h>
+#include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
@@ -583,6 +584,51 @@ const char* evse_state_to_str(evse_state_t state)
 uint32_t evse_get_error(void)
 {
     return error;
+}
+
+const char* evse_error_to_str(uint32_t error)
+{
+  static char rval[125];
+  char tmp[25];
+  rval[0] = '\0';
+
+  if ( error & EVSE_ERR_PILOT_FAULT_BIT) {
+      sprintf(tmp, "Pilot fault|");
+      strcat(rval, tmp);
+  }
+  if ( error & EVSE_ERR_DIODE_SHORT_BIT) {
+      sprintf(tmp, "Diode short|");
+      strcat(rval, tmp);
+  }
+  if ( error & EVSE_ERR_LOCK_FAULT_BIT) {
+      sprintf(tmp, "Lock fault|");
+      strcat(rval, tmp);
+  }
+  if ( error & EVSE_ERR_UNLOCK_FAULT_BIT) {
+      sprintf(tmp, "Unlock fault|");
+      strcat(rval, tmp);
+  }
+  if ( error & EVSE_ERR_RCM_TRIGGERED_BIT) {
+      sprintf(tmp, "RCM triggered|");
+      strcat(rval, tmp);
+  }
+  if ( error & EVSE_ERR_RCM_SELFTEST_FAULT_BIT) {
+      sprintf(tmp, "RCM selftest fault|");
+      strcat(rval, tmp);
+  }
+  if ( error & EVSE_ERR_TEMPERATURE_HIGH_BIT) {
+      sprintf(tmp, "Temperature high|");
+      strcat(rval, tmp);
+  }
+  if ( error & EVSE_ERR_TEMPERATURE_FAULT_BIT) {
+      sprintf(tmp, "Temperature fault|");
+      strcat(rval, tmp);
+  }
+  uint8_t len = strlen(rval);
+  if (len) {
+      rval[len-1] = '\0';
+  }
+  return rval;
 }
 
 uint8_t evse_get_max_charging_current(void)
