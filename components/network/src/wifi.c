@@ -283,11 +283,14 @@ void wifi_get_ip(char* ip)
   sprintf(ip, IPSTR, IP2STR(&ip_info.ip));
 }
 
-void wifi_get_mac(char* mac)
+void wifi_get_mac(char* mac, char* separator)
 {
     uint8_t mac_tmp[6];
     esp_wifi_get_mac(ESP_IF_WIFI_STA, mac_tmp);
-    sprintf(mac, MACSTR, MAC2STR(mac_tmp));
+    sprintf(mac, "%02x%s%02x%s%02x%s%02x%s%02x%s%02x",
+        mac_tmp[0], separator, mac_tmp[1], separator,
+        mac_tmp[2], separator, mac_tmp[3], separator,
+        mac_tmp[4], separator, mac_tmp[5]);
 }
 
 int8_t wifi_get_rssi(void)

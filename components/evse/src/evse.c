@@ -628,6 +628,9 @@ const char* evse_error_to_str(uint32_t error)
   if (len) {
       rval[len-1] = '\0';
   }
+  else {
+      sprintf(tmp, "-");
+  }
   return rval;
 }
 
