@@ -563,7 +563,7 @@ static void mqtt_publish_evse_sensor_data(esp_mqtt_client_handle_t client) {
   sprintf(tmp, "\"current_l3\":%f,", energy_meter_get_l3_current());
   strcat(payload, tmp);
   // Current power
-  sprintf(tmp, "\"current_power\":%f}", energy_meter_get_l3_current());
+  sprintf(tmp, "\"current_power\":%d}", energy_meter_get_power());
   strcat(payload, tmp);
   esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
 
