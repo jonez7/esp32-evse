@@ -329,50 +329,84 @@ static void mqtt_cfg_switch(
     mqtt_subscribe_set_function(client, field, handler);
 }
 
+static void mqtt_cfg_button(
+    esp_mqtt_client_handle_t client,
+    char* field,
+    char* name,
+    char* icon,
+    char* device_class,
+    mqtt_value_set_handler handler)
+{
+    if (board_config.mqtt_homeassistant_discovery) {
+        char discovery_topic[100];
+        char payload[1000];
+        char tmp[100];
+
+        /* See https://www.home-assistant.io/docs/mqtt/discovery/ and 
+         *     https://www.home-assistant.io/integrations/button.mqtt/ */
+        sprintf(discovery_topic, "homeassistant/button/%s/%s/config", mqtt_main_topic, field);
+
+        mqtt_config_common_part(payload, field, name, icon, "config", 0);
+
+        sprintf(tmp, ",\"command_topic\": \"~/%s/set\"", field);
+        strcat(payload, tmp);
+
+        if (strlen(device_class)) {
+            sprintf(tmp, ",\"device_class\": \"%s\"", device_class);
+            strcat(payload, tmp);
+        }
+
+        strcat(payload, "}");
+
+        esp_mqtt_client_publish(client, discovery_topic, payload, 0, /*qos*/1, /*retain*/1);
+    }
+
+    mqtt_subscribe_set_function(client, field, handler);
+}
 
 // Maximum charging current / ama
 static void mqtt_evse_set_max_charging_current(char* data) {
-  evse_set_max_charging_current((uint8_t)(atoi(data)));
+    evse_set_max_charging_current((uint8_t)(atoi(data)));
 }
 
 // Charging current / amp
 static void mqtt_evse_set_charging_current(char* data) {
-  evse_set_charging_current((uint16_t)(atoi(data)*10));
+    evse_set_charging_current((uint16_t)(atoi(data)*10));
 }
 
 // Temperature threshold / amt
 static void mqtt_evse_set_temp_threshold(char* data) {
-  evse_set_temp_threshold((uint8_t)(atoi(data)));
+    evse_set_temp_threshold((uint8_t)(atoi(data)));
 }
 
 // Default consumption limit / ate
 static void mqtt_evse_set_consumption_limit(char* data) {
-  evse_set_consumption_limit((uint32_t)(atoi(data)*1000));
+    evse_set_consumption_limit((uint32_t)(atoi(data)*1000));
 }
 
 // Default consumption limit / ate
 static void mqtt_evse_set_default_consumption_limit(char* data) {
-  evse_set_default_consumption_limit((uint32_t)(atoi(data)*1000));
+    evse_set_default_consumption_limit((uint32_t)(atoi(data)*1000));
 }
 
 // Charging time limit / att
 static void mqtt_evse_set_charging_time_limit(char* data) {
-  evse_set_charging_time_limit((uint32_t)(atoi(data)*1000));
+    evse_set_charging_time_limit((uint32_t)(atoi(data)*1000));
 }
 
 // Default charging time limit
 static void mqtt_evse_set_default_charging_time_limit(char* data) {
-  evse_set_default_charging_time_limit((uint32_t)(atoi(data)*1000));
+    evse_set_default_charging_time_limit((uint32_t)(atoi(data)*1000));
 }
 
 // Under power limit / upl
 static void mqtt_evse_set_under_power_limit(char* data) {
-  evse_set_under_power_limit((uint32_t)(atoi(data)*1000));
+    evse_set_under_power_limit((uint32_t)(atoi(data)*1000));
 }
 
 // Default under power limit / upl
 static void mqtt_evse_set_default_under_power_limit(char* data) {
-  evse_set_default_under_power_limit((uint32_t)(atoi(data)*1000));
+    evse_set_default_under_power_limit((uint32_t)(atoi(data)*1000));
 }
 
 // AC Voltage /acv
@@ -381,7 +415,7 @@ static void mqtt_evse_set_ac_voltage(char* data) {
 }
   // Energy meter mode / emm
 static void mqtt_evse_set_energy_meter_mode(char* data) {
-  energy_meter_set_mode(energy_meter_str_to_mode_mqtt(data));
+    energy_meter_set_mode(energy_meter_str_to_mode_mqtt(data));
 }
 
 // Set charger state / scs
@@ -391,12 +425,18 @@ static void mqtt_evse_set_charger_state(char* data) {
 
 // Card authorization required / acs
 static void mqtt_evse_set_require_auth(char* data) {
-  evse_set_require_auth(strcmp(data, "ON")==0 ? true : false);
+    evse_set_require_auth(strcmp(data, "ON")==0 ? true : false);
 }
 
 // Socket outlet / sol
 static void mqtt_evse_set_socket_outlet(char* data) {
-  evse_set_socket_outlet(strcmp(data, "ON")==0 ? true : false);
+    evse_set_socket_outlet(strcmp(data, "ON")==0 ? true : false);
+}
+
+// Restart the device
+static void mqtt_evse_reboot(char* data) {
+    evse_set_available(false);
+    esp_restart();
 }
 
 static void mqtt_subscribe_send_ha_discovery(esp_mqtt_client_handle_t client) {
@@ -452,6 +492,9 @@ static void mqtt_subscribe_send_ha_discovery(esp_mqtt_client_handle_t client) {
     mqtt_cfg_switch(client, "scs", "Set charger state"          , "mdi:auto-fix", "switch"    , mqtt_evse_set_charger_state);
     mqtt_cfg_switch(client, "acs", "Card authorization required", ""            , "switch"    , mqtt_evse_set_require_auth);
     mqtt_cfg_switch(client, "sol", "Socket outlet"              , ""            , "switch"    , mqtt_evse_set_socket_outlet);
+
+    // Button:                  Field| User Friendly Name  | Icon| Device Class| Value Set Handler
+    mqtt_cfg_button(client, "restart", "Restart the device", ""  , "restart"   , mqtt_evse_reboot);
 
     for (uint8_t i=0; i < mqtt_value_set_handler_count; i++) {
         ESP_LOGD(TAG, 
