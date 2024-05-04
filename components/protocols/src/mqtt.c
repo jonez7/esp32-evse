@@ -582,9 +582,9 @@ static void mqtt_publish_evse_sensor_data(esp_mqtt_client_handle_t client) {
   sprintf(payload, "{");
   sprintf(tmp, "\"temperature_sensor_error\":%d,", temp_sensor_is_error());
   strcat(payload, tmp);
-  sprintf(tmp, "\"temperature_sensor_low\":%f,", temp_sensor_get_low()/100.0);
+  sprintf(tmp, "\"temperature_sensor_low\":%.1f,", temp_sensor_get_low()/100.0);
   strcat(payload, tmp);
-  sprintf(tmp, "\"temperature_sensor_high\":%f,", temp_sensor_get_high()/100.0);
+  sprintf(tmp, "\"temperature_sensor_high\":%.1f,", temp_sensor_get_high()/100.0);
   strcat(payload, tmp);
   sprintf(tmp, "\"temperature_sensor_count\":%d,", temp_sensor_get_count());
   strcat(payload, tmp);
@@ -593,10 +593,10 @@ static void mqtt_publish_evse_sensor_data(esp_mqtt_client_handle_t client) {
   temp_sensor_get_temperatures(curr_temps);
   for (i=1 ; i < ARRAY_SIZE(curr_temps); i++)
   {
-    sprintf(tmp, "\"temperature_sensor_%d\":%f,", i, curr_temps[i-1]/100.0);
+    sprintf(tmp, "\"temperature_sensor_%d\":%.1f,", i, curr_temps[i-1]/100.0);
     strcat(payload, tmp);
   }
-  sprintf(tmp, "\"temperature_sensor_%d\":%f}", i, curr_temps[i-1]/100.0);
+  sprintf(tmp, "\"temperature_sensor_%d\":%.1f}", i, curr_temps[i-1]/100.0);
   strcat(payload, tmp);
   esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
 
