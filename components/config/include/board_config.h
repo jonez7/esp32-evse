@@ -162,7 +162,6 @@ typedef struct
     char wifi_ap_ssid[32];
     char wifi_ap_pass[64];
 
-<<<<<<< HEAD
     bool mqtt : 1;
     char mqtt_uri[32];
     char mqtt_main_topic[11];
@@ -174,10 +173,6 @@ typedef struct
     bool addressable_led :1;
     gpio_num_t addressable_led_gpio;
 
-=======
-    bool addressable_led :1;
-    gpio_num_t addressable_led_gpio;
-
     bool thermistor :1;
     adc_channel_t thermistor_adc_channel;
     uint32_t thermistor_r1;
@@ -186,7 +181,6 @@ typedef struct
 
     esp_log_level_t log_level;
     char log_component[32];
->>>>>>> 654f7e1de2ca463e8cf2b0800d7f03eb5759badb
 } board_config_t;
 
 extern board_config_t board_config;
