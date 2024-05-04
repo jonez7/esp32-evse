@@ -114,7 +114,7 @@ void wifi_get_ip(char* ip);
  *
  * @param mac
  */
-void wifi_get_mac(char* mac);
+void wifi_get_mac(char* mac, char* separator);
 
 /**
  * @brief Get WiFi RSSI

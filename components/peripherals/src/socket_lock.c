@@ -227,7 +227,7 @@ socket_lock_status_t socket_lock_get_status(void)
     return status;
 }
 
-const char * socket_lock_status_to_str(socket_lock_status_t status)
+const char* socket_lock_status_to_str(socket_lock_status_t status)
 {
     switch (status) {
         case SOCKED_LOCK_STATUS_IDLE:
