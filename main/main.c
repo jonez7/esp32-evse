@@ -268,6 +268,9 @@ void app_main(void)
 
     board_config_load();
 
+    // Configure logging level
+    esp_log_level_set(board_config.log_component, board_config.log_level);
+
     wifi_init();
     peripherals_init();
     modbus_init();
@@ -278,7 +281,7 @@ void app_main(void)
     button_init();
     script_init();
     addressable_led_init();
-    
+
     xTaskCreate(wifi_event_task_func, "wifi_event_task", 4 * 1024, NULL, 5, NULL);
     xTaskCreate(user_input_task_func, "user_input_task", 2 * 1024, NULL, 5, &user_input_task);
       

@@ -2,6 +2,7 @@
 #include <led_strip.h>
 
 #include "board_config.h"
+#include "addressable_led.h"
 
 #include <stdint.h>
 
@@ -19,7 +20,7 @@ static led_strip_handle_t led_strip;
  */
 void addressable_led_init(void) {
     if (board_config.addressable_led) {
-#ifdef RMT        
+#ifdef RMT
         /* LED strip initialization with the GPIO and pixels number*/
         led_strip_config_t strip_config = {
             .strip_gpio_num = board_config.addressable_led_gpio,
