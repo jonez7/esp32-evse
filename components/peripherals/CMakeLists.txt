@@ -2,6 +2,7 @@ set(srcs
     "src/adc.c"
     "src/peripherals.c"
     "src/led.c"
+    "src/button.c"
     "src/pilot.c"
     "src/proximity.c"
     "src/ac_relay.c"

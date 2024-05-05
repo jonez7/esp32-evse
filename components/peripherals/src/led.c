@@ -18,7 +18,7 @@ static struct led_s
     bool on : 1;
     uint16_t ontime, offtime;
     TimerHandle_t timer;
-} leds[3];
+} leds[LED_ID_MAX];
 
 void led_init(void)
 {
@@ -48,6 +48,11 @@ void led_init(void)
     if (board_config.led_error) {
         leds[LED_ID_ERROR].gpio = board_config.led_error_gpio;
         io_conf.pin_bit_mask |= BIT64(board_config.led_error_gpio);
+    }
+
+    if (board_config.led_aux1) {
+        leds[LED_ID_AUX1].gpio = board_config.led_aux1_gpio;
+        io_conf.pin_bit_mask |= BIT64(board_config.led_aux1_gpio);
     }
 
     if (io_conf.pin_bit_mask > 0) {
