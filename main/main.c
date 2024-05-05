@@ -14,6 +14,7 @@
 #include "sdkconfig.h"
 
 #include "board_config.h"
+#include "button.h"
 #include "evse.h"
 #include "led.h"
 #include "logger.h"
@@ -29,12 +30,18 @@
 #define AP_CONNECTION_TIMEOUT 60000  // 60sec
 #define RESET_HOLD_TIME       10000  // 10sec
 
+#define NEW_BUTTON_API          1
+
+#if !NEW_BUTTON_API
 #define PRESS_BIT    BIT0
 #define RELEASED_BIT BIT1
+#endif /* #if !NEW_BUTTON_API */
 
 static const char* TAG = "app_main";
 
+#if !NEW_BUTTON_API
 static TaskHandle_t user_input_task;
+#endif
 
 static evse_state_t led_state = -1;
 
@@ -83,7 +90,21 @@ static void wifi_event_task_func(void* param)
         }
     }
 }
+#if NEW_BUTTON_API
+void wifi_button_release_handler(TickType_t press_time)
+{
+    if (xTaskGetTickCount() - press_time >= pdMS_TO_TICKS(RESET_HOLD_TIME)) {
+        evse_set_available(false);
+        reset_and_reboot();
+    } else {
+        if (!(xEventGroupGetBits(wifi_event_group) & WIFI_AP_MODE_BIT)) {
+            wifi_ap_start();
+        }
+    }
+}
+#endif /* #if NEW_BUTTON_API */
 
+#if !NEW_BUTTON_API
 static void user_input_task_func(void* param)
 {
     uint32_t notification;
@@ -113,7 +134,9 @@ static void user_input_task_func(void* param)
         }
     }
 }
+#endif /* #if !NEW_BUTTON_API*/
 
+#if !NEW_BUTTON_API
 static void IRAM_ATTR button_isr_handler(void* arg)
 {
     BaseType_t higher_task_woken = pdFALSE;
@@ -128,7 +151,9 @@ static void IRAM_ATTR button_isr_handler(void* arg)
         portYIELD_FROM_ISR();
     }
 }
+#endif /* #if !NEW_BUTTON_API*/
 
+#if !NEW_BUTTON_API
 static void button_init(void)
 {
     gpio_config_t conf = {
@@ -141,6 +166,7 @@ static void button_init(void)
     ESP_ERROR_CHECK(gpio_config(&conf));
     ESP_ERROR_CHECK(gpio_isr_handler_add(board_config.button_wifi_gpio, button_isr_handler, NULL));
 }
+#endif /* #if !NEW_BUTTON_API */
 
 static void fs_info(esp_vfs_spiffs_conf_t* conf)
 {
@@ -281,9 +307,14 @@ void app_main(void)
     button_init();
     script_init();
     addressable_led_init();
+#if NEW_BUTTON_API
+    button_set_released_handler(BUTTON_ID_WIFI, wifi_button_release_handler);
+#endif
 
     xTaskCreate(wifi_event_task_func, "wifi_event_task", 4 * 1024, NULL, 5, NULL);
+#if !NEW_BUTTON_API
     xTaskCreate(user_input_task_func, "user_input_task", 2 * 1024, NULL, 5, &user_input_task);
+#endif
 
     while (true) {
         evse_process();

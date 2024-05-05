@@ -27,8 +27,14 @@ typedef struct {
     gpio_num_t led_error_gpio;
     bool led_wifi : 1;
     gpio_num_t led_wifi_gpio;
+    bool led_aux1 : 1;
+    gpio_num_t led_aux1_gpio;
 
     gpio_num_t button_wifi_gpio;
+    bool button_evse_enable : 1;
+    gpio_num_t button_evse_enable_gpio;
+    bool button_aux1 : 1;
+    gpio_num_t button_aux1_gpio;
 
     gpio_num_t pilot_pwm_gpio;
     adc_channel_t pilot_adc_channel;
@@ -45,6 +51,8 @@ typedef struct {
     uint16_t proximity_down_threshold_32;
 
     gpio_num_t ac_relay_gpio;
+    bool aux_relay : 1;
+    gpio_num_t aux_relay_gpio;
 
     bool socket_lock : 1;
     gpio_num_t socket_lock_a_gpio;

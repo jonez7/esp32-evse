@@ -11,6 +11,7 @@ typedef enum {
     LED_ID_WIFI,
     LED_ID_CHARGING,
     LED_ID_ERROR,
+    LED_ID_AUX1,
     LED_ID_MAX
 } led_id_t;
 
