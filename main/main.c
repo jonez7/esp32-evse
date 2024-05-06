@@ -103,6 +103,12 @@ void wifi_button_release_handler(TickType_t press_time)
         }
     }
 }
+
+void evse_enable_button_press_handler(void)
+{
+    ESP_LOGI(TAG, "EVSE_ENABLE: state=%d", evse_is_enabled());
+    evse_set_enabled(!evse_is_enabled());
+}
 #endif /* #if NEW_BUTTON_API */
 
 #if !NEW_BUTTON_API
@@ -310,6 +316,9 @@ void app_main(void)
     addressable_led_init();
 #if NEW_BUTTON_API
     button_set_released_handler(BUTTON_ID_WIFI, wifi_button_release_handler);
+    if (board_config.button_evse_enable) {
+        button_set_pressed_handler(BUTTON_ID_EVSE_ENABLE,  evse_enable_button_press_handler);
+    }
 #endif
 
     xTaskCreate(wifi_event_task_func, "wifi_event_task", 4 * 1024, NULL, 5, NULL);
