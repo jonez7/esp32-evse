@@ -33,9 +33,9 @@ static void IRAM_ATTR button_isr_handler(void* arg)
     if (gpio_get_level(buttons[button_idx].gpio)) {
         button_idx |= GPIO_STATE_BIT;
     } else {
-        button_idx &= GPIO_STATE_BIT;
+        button_idx &= ~GPIO_STATE_BIT;
     }
-    xTaskNotifyFromISR(user_input_task, button_idx, eSetBits, &higher_task_woken);
+    xTaskNotifyFromISR(user_input_task, button_idx, eSetValueWithoutOverwrite, &higher_task_woken);
 
     if (higher_task_woken) {
         portYIELD_FROM_ISR();
@@ -57,7 +57,6 @@ static void user_input_task_func(void* param)
                 if (buttons[button_idx].pressed_handler) {
                     buttons[button_idx].pressed_handler();
                 }
-                ESP_LOGI(TAG, "Button pressed %d handler %x", (int)button_idx, (unsigned int)buttons[button_idx].pressed_handler);
             }
             if (BIT_RELEASED == state) {
                 // sometimes after connect debug UART emit RELEASED_BIT
@@ -66,9 +65,13 @@ static void user_input_task_func(void* param)
                     buttons[button_idx].released_handler(buttons[button_idx].press_tick);
                 }
                 buttons[button_idx].pressed = false;
-                ESP_LOGI(TAG, "Button released %d handler %x", (int)button_idx, (unsigned int)buttons[button_idx].released_handler);
             }
         }
+        ESP_LOGD(TAG, "Button notfification=0x%08"PRIx32": button=%d state=%d pressed=%d", 
+            notification,
+            (int)notification & ~GPIO_STATE_BIT,
+            (int)(notification & GPIO_STATE_BIT? 1:0),
+            buttons[notification & ~GPIO_STATE_BIT].pressed);
     }
 }
 
@@ -84,7 +87,7 @@ void button_init(void)
 
     gpio_config_t io_conf =  {
         .mode = GPIO_MODE_INPUT,
-        .intr_type = GPIO_INTR_ANYEDGE, // ???????????
+        .intr_type = GPIO_INTR_ANYEDGE,
         .pull_up_en = GPIO_PULLUP_ENABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
         .pin_bit_mask = 0
@@ -109,6 +112,7 @@ void button_init(void)
     for (int i = 0; i < BUTTON_ID_MAX; i++) {
         if (GPIO_NUM_NC != buttons[i].gpio) {
             ESP_ERROR_CHECK(gpio_isr_handler_add(buttons[i].gpio, button_isr_handler, (void*)i));
+            ESP_LOGD(TAG, "Set button ISR butt=%d, gpio=%d", i, (int)buttons[i].gpio);
         }
     }
 
