@@ -6,6 +6,7 @@ set(srcs
     "src/pilot.c"
     "src/proximity.c"
     "src/ac_relay.c"
+    "src/aux_relay.c"
     "src/energy_meter.c"
     "src/socket_lock.c"
     "src/rcm.c"
