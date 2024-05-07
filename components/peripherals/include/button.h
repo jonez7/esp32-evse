@@ -16,17 +16,23 @@ typedef enum
 } button_id_t;
 
 /**
- * @brief Button pressed handler func
+ * @brief Handler register types
  * 
  */
-typedef void (*button_pressed_handler)(void);
+typedef enum
+{
+    BUTTON_HANDLER_NONE = 0,
+    BUTTON_HANDLER_PRESSED = 1,
+    BUTTON_HANDLER_RELEASED = 2,
+    BUTTON_HANDLER_BOTH = 3
+} button_handler_t;
 
 /**
- * @brief Button released handler func
+ * @brief Button handler func
  *
- * @param The time (got from xTaskGetTickCount) when button was pressed
+ * @param time when button press was detected
  */
-typedef void (*button_released_handler)(TickType_t press_time);
+typedef void (*button_activity_handler)(TickType_t press_time);
 
 /**
  * @brief Initialize button
@@ -35,19 +41,12 @@ typedef void (*button_released_handler)(TickType_t press_time);
 void button_init(void);
 
 /**
- * @brief Set button pressed handler
+ * @brief Set button handler
  * 
  * @param button_id id of button
  * @param handler for button pressed activity
+ * @param type which kind of activity to trigger
  */
-void button_set_pressed_handler(button_id_t button_id, button_pressed_handler handler);
-
-/**
- * @brief Set button released handler
- * 
- * @param button_id id of button
- * @param handler for button released activity
- */
-void button_set_released_handler(button_id_t button_id, button_released_handler handler);
+void button_set_handler(button_id_t button_id, button_activity_handler handler, button_handler_t type);
 
 #endif /* BUTTON_H_ */

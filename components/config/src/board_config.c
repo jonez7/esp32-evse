@@ -112,6 +112,7 @@ void board_config_load()
                     SET_CONFIG_VALUE("AC_RELAY_GPIO", ac_relay_gpio, atoi);
                     SET_CONFIG_VALUE("AUX_RELAY", aux_relay, atob);
                     SET_CONFIG_VALUE("AUX_RELAY_GPIO", aux_relay_gpio, atoi);
+                    SET_CONFIG_VALUE("POWER_OUTLET", power_outlet, atob);
                     SET_CONFIG_VALUE("SOCKET_LOCK", socket_lock, atob);
                     SET_CONFIG_VALUE("SOCKET_LOCK_A_GPIO", socket_lock_a_gpio, atoi);
                     SET_CONFIG_VALUE("SOCKET_LOCK_B_GPIO", socket_lock_b_gpio, atoi);
