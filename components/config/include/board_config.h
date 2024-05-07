@@ -54,6 +54,8 @@ typedef struct {
     bool aux_relay : 1;
     gpio_num_t aux_relay_gpio;
 
+    bool power_outlet : 1;
+
     bool socket_lock : 1;
     gpio_num_t socket_lock_a_gpio;
     gpio_num_t socket_lock_b_gpio;
