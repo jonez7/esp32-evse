@@ -19,24 +19,26 @@ void proximity_init(void)
 
 uint8_t proximity_get_max_current(void)
 {
-    int voltage;
-    adc_oneshot_read(adc_handle, board_config.proximity_adc_channel, &voltage);
-    adc_cali_raw_to_voltage(adc_cali_handle, voltage, &voltage);
+    uint8_t current = 63;
 
-    ESP_LOGD(TAG, "Measured: %dmV", voltage);
+    if (board_config.proximity) {
+        int voltage;
+        adc_oneshot_read(adc_handle, board_config.proximity_adc_channel, &voltage);
+        adc_cali_raw_to_voltage(adc_cali_handle, voltage, &voltage);
 
-    uint8_t current;
-    if (voltage >= board_config.proximity_down_threshold_13) {
-        current = 13;
-    } else if (voltage >= board_config.proximity_down_threshold_20) {
-        current = 20;
-    } else if (voltage >= board_config.proximity_down_threshold_32) {
-        current = 32;
-    } else {
-        current = 63;
+        ESP_LOGD(TAG, "Measured: %dmV", voltage);
+
+        
+        if (voltage >= board_config.proximity_down_threshold_13) {
+            current = 13;
+        } else if (voltage >= board_config.proximity_down_threshold_20) {
+            current = 20;
+        } else if (voltage >= board_config.proximity_down_threshold_32) {
+            current = 32;
+        }
+
+        ESP_LOGI(TAG, "Max current: %dA", current);
     }
-
-    ESP_LOGI(TAG, "Max current: %dA", current);
 
     return current;
 }

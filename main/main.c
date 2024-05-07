@@ -26,9 +26,10 @@
 #include "script.h"
 #include "logger.h"
 #include "addressable_led.h"
+#include "power_outlet.h"
 
 #define AP_CONNECTION_TIMEOUT   60000 // 60sec
-#define RESET_HOLD_TIME         10000 // 10sec
+#define RESET_HOLD_TIME         5000  // 5sec
 
 #define NEW_BUTTON_API          1
 
@@ -95,26 +96,33 @@ static void wifi_event_task_func(void* param)
 void wifi_button_release_handler(TickType_t press_time)
 {
     if (xTaskGetTickCount() - press_time >= pdMS_TO_TICKS(RESET_HOLD_TIME)) {
+        ESP_LOGD(TAG, "REBOOT the SYSTEM.");
         evse_set_available(false);
         reset_and_reboot();
     } else {
         if (!(xEventGroupGetBits(wifi_event_group) & WIFI_AP_MODE_BIT)) {
+            ESP_LOGD(TAG, "START WIFI AP");
             wifi_ap_start();
         }
     }
 }
 
-void evse_enable_button_press_handler(void)
+void evse_enable_button_press_handler(TickType_t press_time)
 {
-    ESP_LOGI(TAG, "EVSE_ENABLE: state=%d", evse_is_enabled());
-    evse_set_enabled(!evse_is_enabled());
+    static TickType_t prev_toggle_time = 0;
+    // Previous togle needs to be second ago
+    if ( press_time - prev_toggle_time > pdMS_TO_TICKS(1000)) {
+        ESP_LOGD(TAG, "EVSE_ENABLE: state=%d", evse_is_enabled());
+        evse_set_enabled(!evse_is_enabled());
+        prev_toggle_time = press_time;
+    }
 }
 
 void set_button_callbacks(void)
 {
-    button_set_released_handler(BUTTON_ID_WIFI, wifi_button_release_handler);
+    button_set_handler(BUTTON_ID_WIFI, wifi_button_release_handler, BUTTON_HANDLER_RELEASED);
     if (board_config.button_evse_enable) {
-        button_set_pressed_handler(BUTTON_ID_EVSE_ENABLE,  evse_enable_button_press_handler);
+        button_set_handler(BUTTON_ID_EVSE_ENABLE,  evse_enable_button_press_handler, BUTTON_HANDLER_BOTH);
     }
 }
 #endif /* #if NEW_BUTTON_API */
@@ -322,6 +330,7 @@ void app_main(void)
     button_init();
     script_init();
     addressable_led_init();
+    power_outlet_init();
 
 #if NEW_BUTTON_API
     set_button_callbacks();

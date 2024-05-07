@@ -16,4 +16,11 @@ void aux_relay_init(void);
  */
 void aux_relay_set_state(bool state);
 
+/**
+ * @brief Get state of aux relay
+ * 
+ * @return state 
+ */
+bool aux_relay_get_state(void);
+
 #endif /* AUX_RELAY_H_ */
