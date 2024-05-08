@@ -31,19 +31,7 @@
 #define AP_CONNECTION_TIMEOUT   60000 // 60sec
 #define RESET_HOLD_TIME         5000  // 5sec
 
-#define NEW_BUTTON_API          1
-
-#if !NEW_BUTTON_API
-#define PRESS_BIT               BIT0
-#define RELEASED_BIT            BIT1
-#endif /* #if !NEW_BUTTON_API */
-
-
 static const char* TAG = "app_main";
-
-#if !NEW_BUTTON_API
-static TaskHandle_t user_input_task;
-#endif
 
 static evse_state_t led_state = -1;
 
@@ -92,7 +80,7 @@ static void wifi_event_task_func(void* param)
         }
     }
 }
-#if NEW_BUTTON_API
+
 void wifi_button_release_handler(TickType_t press_time)
 {
     if (xTaskGetTickCount() - press_time >= pdMS_TO_TICKS(RESET_HOLD_TIME)) {
@@ -125,71 +113,6 @@ void set_button_callbacks(void)
         button_set_handler(BUTTON_ID_EVSE_ENABLE,  evse_enable_button_press_handler, BUTTON_HANDLER_BOTH);
     }
 }
-#endif /* #if NEW_BUTTON_API */
-
-#if !NEW_BUTTON_API
-static void user_input_task_func(void* param)
-{
-    uint32_t notification;
-
-    bool pressed = false;
-    TickType_t press_tick = 0;
-
-    while (true) {
-        if (xTaskNotifyWait(0x00, 0xff, &notification, portMAX_DELAY)) {
-            if (notification & PRESS_BIT) {
-                press_tick = xTaskGetTickCount();
-                pressed = true;
-            }
-            if (notification & RELEASED_BIT) {
-                if (pressed) { // sometimes after connect debug UART emit RELEASED_BIT without preceding PRESS_BIT
-                    if (xTaskGetTickCount() - press_tick >= pdMS_TO_TICKS(RESET_HOLD_TIME)) {
-                        evse_set_available(false);
-                        reset_and_reboot();
-                    } else {
-                        if (!(xEventGroupGetBits(wifi_event_group) & WIFI_AP_MODE_BIT)) {
-                            wifi_ap_start();
-                        }
-                    }
-                }
-                pressed = false;
-            }
-        }
-    }
-}
-#endif /* #if !NEW_BUTTON_API*/
-
-#if !NEW_BUTTON_API
-static void IRAM_ATTR button_isr_handler(void* arg)
-{
-    BaseType_t higher_task_woken = pdFALSE;
-
-    if (gpio_get_level(board_config.button_wifi_gpio)) {
-        xTaskNotifyFromISR(user_input_task, RELEASED_BIT, eSetBits, &higher_task_woken);
-    } else {
-        xTaskNotifyFromISR(user_input_task, PRESS_BIT, eSetBits, &higher_task_woken);
-    }
-
-    if (higher_task_woken) {
-        portYIELD_FROM_ISR();
-    }
-}
-#endif /* #if !NEW_BUTTON_API*/
-
-#if !NEW_BUTTON_API
-static void button_init(void)
-{
-    gpio_config_t conf = {
-        .pin_bit_mask = BIT64(board_config.button_wifi_gpio),
-        .mode = GPIO_MODE_INPUT,
-        .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .pull_up_en = GPIO_PULLUP_ENABLE,
-        .intr_type = GPIO_INTR_ANYEDGE
-    };
-    ESP_ERROR_CHECK(gpio_config(&conf));
-    ESP_ERROR_CHECK(gpio_isr_handler_add(board_config.button_wifi_gpio, button_isr_handler, NULL));
-}
-#endif /* #if !NEW_BUTTON_API */
 
 static void fs_info(esp_vfs_spiffs_conf_t* conf)
 {
@@ -332,14 +255,9 @@ void app_main(void)
     addressable_led_init();
     power_outlet_init();
 
-#if NEW_BUTTON_API
     set_button_callbacks();
-#endif
 
     xTaskCreate(wifi_event_task_func, "wifi_event_task", 4 * 1024, NULL, 5, NULL);
-#if !NEW_BUTTON_API
-    xTaskCreate(user_input_task_func, "user_input_task", 2 * 1024, NULL, 5, &user_input_task);
-#endif
 
     while (true) {
         evse_process();
