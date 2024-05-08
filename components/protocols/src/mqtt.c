@@ -16,6 +16,7 @@
 #include "socket_lock.h"
 #include "temp_sensor.h"
 #include "proximity.h"
+#include "power_outlet.h"
 
 #define LWT_TOPIC        "state"
 #define LWT_CONNECTED    "online"
@@ -45,7 +46,7 @@ static char mqtt_lwt_topic[64];
 
 static uint8_t mqtt_value_set_handler_count = 0;
 
-static struct mqtt_value_set_handlers_funcs mqtt_value_set_handlers[15];
+static struct mqtt_value_set_handlers_funcs mqtt_value_set_handlers[16];
 
 static int replacechar(char *str, char orig, char rep)
 {
@@ -433,6 +434,11 @@ static void mqtt_evse_set_socket_outlet(char* data) {
     evse_set_socket_outlet(strcmp(data, "ON")==0 ? true : false);
 }
 
+// Aux power outlet / pol
+static void mqtt_aux_set_power_outlet(char* data) {
+    power_outlet_set_state(strcmp(data, "ON")==0 ? true : false);
+}
+
 // Restart the device
 static void mqtt_evse_reboot(char* data) {
     evse_set_available(false);
@@ -488,10 +494,11 @@ static void mqtt_subscribe_send_ha_discovery(esp_mqtt_client_handle_t client) {
     // Select:              Field | User Friendly Name | Icon                | Options
     mqtt_cfg_select(client, "emm" , "Energy meter mode", "mdi:meter-electric", "\"Dummy single phase\",\"Dummy three phase\",\"Current sensing\",\"Current and voltage sensing\"", mqtt_evse_set_energy_meter_mode);
 
-    // Switch:              Field| User Friendly Name           | Icon          | Device Class| Value Set Handler
-    mqtt_cfg_switch(client, "scs", "Set charger state"          , "mdi:auto-fix", "switch"    , mqtt_evse_set_charger_state);
-    mqtt_cfg_switch(client, "acs", "Card authorization required", ""            , "switch"    , mqtt_evse_set_require_auth);
-    mqtt_cfg_switch(client, "sol", "Socket outlet"              , ""            , "switch"    , mqtt_evse_set_socket_outlet);
+    // Switch:              Field| User Friendly Name           | Icon                 | Device Class| Value Set Handler
+    mqtt_cfg_switch(client, "scs", "Set charger state"          , "mdi:auto-fix"       , "switch"    , mqtt_evse_set_charger_state);
+    mqtt_cfg_switch(client, "acs", "Card authorization required", ""                   , "switch"    , mqtt_evse_set_require_auth);
+    mqtt_cfg_switch(client, "sol", "Socket outlet"              , "mdi:ev-plug-type2"  , "switch"    , mqtt_evse_set_socket_outlet);
+    mqtt_cfg_switch(client, "pol", "Aux power outlet"           , "mdi:power-socket-eu", "switch"    , mqtt_aux_set_power_outlet);
 
     // Button:                  Field| User Friendly Name  | Icon| Device Class| Value Set Handler
     mqtt_cfg_button(client, "restart", "Restart the device", ""  , "restart"   , mqtt_evse_reboot);
@@ -736,6 +743,11 @@ static void mqtt_publish_evse_switch_data(esp_mqtt_client_handle_t client) {
   sprintf(topic, "%s/sol", mqtt_main_topic);
   sprintf(payload, "%s", evse_get_socket_outlet()? "ON": "OFF");
   esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+
+  // Socket outlet
+  sprintf(topic, "%s/pol", mqtt_main_topic);
+  sprintf(payload, "%s", power_outlet_get_state()? "ON": "OFF");
+  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
 }
 
 static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_t event_id, void* event_data)
@@ -827,17 +839,25 @@ static void mqtt_task_func(void* param)
         ESP_LOGE(TAG, "client start failed!");
     }
 
-    uint8_t static_data_publish_counter = 10;
+    uint8_t static_data_publish_counter = 0;
     while (true) {
         vTaskDelay(pdMS_TO_TICKS(1000));
 
-        static_data_publish_counter--;
-        if (!static_data_publish_counter) {
+        static_data_publish_counter++;
+        
+        if ((static_data_publish_counter % 10) == 2) {
             mqtt_publish_system_data(client);
-            static_data_publish_counter = 10;
+        }
+        else if ((static_data_publish_counter % 10) == 4) {
             mqtt_publish_evse_sensor_data(client);
+        }
+        else if ((static_data_publish_counter % 10) == 6) {
             mqtt_publish_evse_number_data(client);
+        }
+        else if ((static_data_publish_counter % 10) == 8) {
             mqtt_publish_evse_select_data(client);
+        }
+        else if ((static_data_publish_counter % 10) == 0) {
             mqtt_publish_evse_switch_data(client);
         }
     }
