@@ -67,7 +67,9 @@ static void user_input_task_func(void* param)
                 if (BIT_RELEASED == state) {
                     // sometimes after connect debug UART emit RELEASED_BIT
                     // without preceding PRESS_BIT
-                    if (buttons[button_idx].pressed && buttons[button_idx].handler) {
+                    if (buttons[button_idx].pressed &&
+                        (buttons[button_idx].activity_type & BUTTON_HANDLER_RELEASED) &&
+                        buttons[button_idx].handler) {
                         buttons[button_idx].handler(buttons[button_idx].press_tick);
                     }
                     buttons[button_idx].pressed = false;
