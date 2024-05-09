@@ -22,6 +22,8 @@
 #define LWT_CONNECTED    "online"
 #define LWT_DISCONNECTED "offline"
 
+#define FORCE_UPDATE_SECONDS  (10*60) // 10 minutes
+
 #define ARRAY_SIZE(_x_) (sizeof(_x_)/sizeof((_x_)[0]))
 
 
@@ -531,7 +533,7 @@ static void mqtt_publish_static_data(esp_mqtt_client_handle_t client) {
   esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
 }
 
-static void mqtt_publish_system_data(esp_mqtt_client_handle_t client) {
+static void mqtt_publish_system_data(esp_mqtt_client_handle_t client, bool force) {
 
   char topic[64];
   char payload[512];
@@ -542,212 +544,404 @@ static void mqtt_publish_system_data(esp_mqtt_client_handle_t client) {
   esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
 
   // Free Mem
+  static size_t prev_fme = 0;
   multi_heap_info_t heap_info;
   heap_caps_get_info(&heap_info, MALLOC_CAP_INTERNAL);
-  sprintf(topic, "%s/fme", mqtt_main_topic);
-  sprintf(payload, "%d", heap_info.total_free_bytes);
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+  size_t fme = heap_info.total_free_bytes;
+  if (force || (fme != prev_fme)) {
+      sprintf(topic, "%s/fme", mqtt_main_topic);
+      sprintf(payload, "%d", fme);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      prev_fme = fme;
+  }
 
   // Wifi RSSI
-  sprintf(topic, "%s/rssi", mqtt_main_topic);
-  sprintf(payload, "%d", wifi_get_rssi());
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+  static int8_t prev_rssi = 0;
+  int8_t rssi = wifi_get_rssi();
+  if (force || (rssi != prev_rssi)) {
+      sprintf(topic, "%s/rssi", mqtt_main_topic);
+      sprintf(payload, "%d", rssi);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      prev_rssi = rssi;
+  }
 
   // CPU Temperature
-  sprintf(topic, "%s/tmc", mqtt_main_topic);
-  sprintf(payload, "%.1f", temp_sensor_read_cpu_temperature());
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+  static float prev_tmc = 0.0;
+  float tmc = temp_sensor_read_cpu_temperature();
+  // this might be bit stupid becuase comparing floats, but...
+  if (force || (tmc != prev_tmc)) {
+      sprintf(topic, "%s/tmc", mqtt_main_topic);
+      sprintf(payload, "%.1f", tmc);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      prev_tmc = tmc;
+  }
 }
 
-static void mqtt_publish_evse_sensor_data(esp_mqtt_client_handle_t client) {
+static void mqtt_publish_evse_sensor_data(esp_mqtt_client_handle_t client, bool force) {
 
   char topic[64];
   char payload[512];
   char tmp[64];
 
   // Cable maximum current
-  sprintf(topic, "%s/cbl", mqtt_main_topic);
-  sprintf(payload, "%d", proximity_get_max_current());
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+  static uint8_t prev_cbl = 0;
+  uint8_t cbl = proximity_get_max_current();
+  if (force || (cbl != prev_cbl)) {
+      sprintf(topic, "%s/cbl", mqtt_main_topic);
+      sprintf(payload, "%d", cbl);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      prev_cbl = cbl;
+  }
 
   // Current charger state
-  sprintf(topic, "%s/ccs", mqtt_main_topic);
-  sprintf(payload, "%s", (evse_is_enabled()? "Charging enabled":"Charging Disabled") );
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+  static bool prev_ccs = 0;
+  bool ccs = evse_is_enabled();
+  if (force || (ccs != prev_ccs)) {
+      sprintf(topic, "%s/ccs", mqtt_main_topic);
+      sprintf(payload, "%s", (ccs? "Charging enabled":"Charging Disabled") );
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      prev_ccs = ccs;
+  }
 
   // Charging duration
-  sprintf(topic, "%s/cdi", mqtt_main_topic);
-  sprintf(payload, "%ld", energy_meter_get_charging_time());
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+  static uint32_t prev_cdi = 0;
+  uint32_t cdi = energy_meter_get_charging_time();
+  if (force || (cdi != prev_cdi)) {
+      sprintf(topic, "%s/cdi", mqtt_main_topic);
+      sprintf(payload, "%ld", cdi);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      prev_cdi = cdi;
+  }
 
   // Error code
-  sprintf(topic, "%s/err", mqtt_main_topic);
-  sprintf(payload, "%s", evse_error_to_str(evse_get_error()));
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+  static uint32_t prev_err = 0;
+  uint32_t err = evse_get_error();
+  if (force || (err != prev_err)) {
+      sprintf(topic, "%s/err", mqtt_main_topic);
+      sprintf(payload, "%s", evse_error_to_str(err));
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      prev_err = err;
+  }
 
   // Total energy
-  sprintf(topic, "%s/eto", mqtt_main_topic);
-  sprintf(payload, "%ld", energy_meter_get_consumption());
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+  static uint32_t prev_eto = 0;
+  uint32_t eto = energy_meter_get_consumption();
+  if (force || (eto != prev_eto)) {
+      sprintf(topic, "%s/eto", mqtt_main_topic);
+      sprintf(payload, "%ld", eto);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      prev_eto = eto;
+  }
 
   // Last session time
-  sprintf(topic, "%s/lst", mqtt_main_topic);
-  sprintf(payload, "%ld", energy_meter_get_session_time());
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+  static uint32_t prev_lst = 0;
+  uint32_t lst = energy_meter_get_session_time();
+  if (force || (lst != prev_lst)) {
+      sprintf(topic, "%s/lst", mqtt_main_topic);
+      sprintf(payload, "%ld", lst);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      prev_lst = lst;
+  }
 
   // Measuremnt statistics
-  sprintf(topic, "%s/nrg", mqtt_main_topic);
-  sprintf(payload, "{");
-  // Voltage L1 / L2 / L3
-  sprintf(tmp, "\"voltage_l1\":%f,", energy_meter_get_l1_voltage());
-  strcat(payload, tmp);
-  sprintf(tmp, "\"voltage_l2\":%f,", energy_meter_get_l2_voltage());
-  strcat(payload, tmp);
-  sprintf(tmp, "\"voltage_l3\":%f,", energy_meter_get_l3_voltage());
-  strcat(payload, tmp);
-  // Current L1 / L2 /L3
-  sprintf(tmp, "\"current_l1\":%f,", energy_meter_get_l1_current());
-  strcat(payload, tmp);
-  sprintf(tmp, "\"current_l2\":%f,", energy_meter_get_l2_current());
-  strcat(payload, tmp);
-  sprintf(tmp, "\"current_l3\":%f,", energy_meter_get_l3_current());
-  strcat(payload, tmp);
-  // Current power
-  sprintf(tmp, "\"current_power\":%d}", energy_meter_get_power());
-  strcat(payload, tmp);
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+  static float prev_l1v = 0.0;
+  static float prev_l2v = 0.0;
+  static float prev_l3v = 0.0;
+  static float prev_l1c = 0.0;
+  static float prev_l2c = 0.0;
+  static float prev_l3c = 0.0;
+  static uint16_t prev_pwr = 0;
+  float l1v = energy_meter_get_l1_voltage();
+  float l2v = energy_meter_get_l2_voltage();
+  float l3v = energy_meter_get_l3_voltage();
+  float l1c = energy_meter_get_l1_current();
+  float l2c = energy_meter_get_l2_current();
+  float l3c = energy_meter_get_l3_current();
+  uint16_t pwr = energy_meter_get_power();
+  if (force ||
+      ((l1v != prev_l1v) || (l2v != prev_l2v) || (l3v != prev_l3v) ||
+       (l1c != prev_l1c) || (l2c != prev_l2c) || (l3c != prev_l3c) ||
+       (pwr != prev_pwr))) {
+      sprintf(topic, "%s/nrg", mqtt_main_topic);
+      sprintf(payload, "{");
+      // Voltage L1 / L2 / L3
+      sprintf(tmp, "\"voltage_l1\":%f,", l1v);
+      strcat(payload, tmp);
+      sprintf(tmp, "\"voltage_l2\":%f,", l2v);
+      strcat(payload, tmp);
+      sprintf(tmp, "\"voltage_l3\":%f,", l3v);
+      strcat(payload, tmp);
+      // Current L1 / L2 /L3
+      sprintf(tmp, "\"current_l1\":%f,", l1c);
+      strcat(payload, tmp);
+      sprintf(tmp, "\"current_l2\":%f,", l2c);
+      strcat(payload, tmp);
+      sprintf(tmp, "\"current_l3\":%f,", l3c);
+      strcat(payload, tmp);
+      // Current power
+      sprintf(tmp, "\"current_power\":%d}", pwr);
+      strcat(payload, tmp);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      prev_l1v = l1v;
+      prev_l2v = l2v;
+      prev_l3v = l3v;
+      prev_l1c = l1c;
+      prev_l2c = l2c;
+      prev_l3c = l3c;
+      prev_pwr = pwr;
+  }
 
   // Residual current detection
-  sprintf(topic, "%s/rcd", mqtt_main_topic);
-  sprintf(payload, "%s", (evse_is_rcm()?"Detected":"Not detected"));
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+  static bool prev_rcd = 0;
+  bool rcd = evse_is_rcm();
+  if (force || (rcd != prev_rcd)) {
+      sprintf(topic, "%s/rcd", mqtt_main_topic);
+      sprintf(payload, "%s", (rcd?"Detected":"Not detected"));
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      prev_rcd = rcd;
+  }
 
   // Status
-  sprintf(topic, "%s/status", mqtt_main_topic);
-  sprintf(payload, "%s", evse_state_to_str(evse_get_state()));
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+  static evse_state_t prev_status = 0;
+  evse_state_t status = evse_get_state();
+  if (force || (status != prev_status)) {
+      sprintf(topic, "%s/status", mqtt_main_topic);
+      sprintf(payload, "%s", evse_state_to_str(status));
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      prev_status = status;
+  }
 
   // Temperature sensors
-  sprintf(topic, "%s/tma", mqtt_main_topic);
-  sprintf(payload, "{");
-  sprintf(tmp, "\"temperature_sensor_error\":%d,", temp_sensor_is_error());
-  strcat(payload, tmp);
-  sprintf(tmp, "\"temperature_sensor_low\":%.1f,", temp_sensor_get_low()/100.0);
-  strcat(payload, tmp);
-  sprintf(tmp, "\"temperature_sensor_high\":%.1f,", temp_sensor_get_high()/100.0);
-  strcat(payload, tmp);
-  sprintf(tmp, "\"temperature_sensor_count\":%d,", temp_sensor_get_count());
-  strcat(payload, tmp);
-  int16_t curr_temps[2] = { 0 };
-  uint8_t i;
-  temp_sensor_get_temperatures(curr_temps);
-  for (i=1 ; i < ARRAY_SIZE(curr_temps); i++)
-  {
-    sprintf(tmp, "\"temperature_sensor_%d\":%.1f,", i, curr_temps[i-1]/100.0);
-    strcat(payload, tmp);
+  static bool prev_tma_err = 0;
+  static int16_t prev_tma_low = 0;
+  static int16_t prev_tma_high = 0;
+  static uint8_t prev_tma_cnt = 0;
+  static int16_t prev_tma_temps[2] = { 0 };
+  bool tma_err = temp_sensor_is_error();
+  int16_t tma_low = temp_sensor_get_low();
+  int16_t tma_high = temp_sensor_get_high();
+  uint8_t tma_cnt = temp_sensor_get_count();
+  int16_t tma_temps[2] = { 0 };
+  temp_sensor_get_temperatures(tma_temps);
+  bool temp_changed = false;
+  for (uint8_t i=0 ; i < ARRAY_SIZE(tma_temps); i++) {
+      if (tma_temps[i] != prev_tma_temps[i]) {
+          temp_changed = true;
+          break;
+      }
   }
-  sprintf(tmp, "\"temperature_sensor_%d\":%.1f}", i, curr_temps[i-1]/100.0);
-  strcat(payload, tmp);
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+  if (force || 
+      ((tma_err != prev_tma_err) ||
+       (tma_low != prev_tma_low) || (tma_high != prev_tma_high) ||
+       (tma_cnt != prev_tma_cnt) || temp_changed)) {
+      sprintf(topic, "%s/tma", mqtt_main_topic);
+      sprintf(payload, "{");
+      sprintf(tmp, "\"temperature_sensor_error\":%d,", temp_sensor_is_error());
+      strcat(payload, tmp);
+      sprintf(tmp, "\"temperature_sensor_low\":%.1f,", temp_sensor_get_low()/100.0);
+      strcat(payload, tmp);
+      sprintf(tmp, "\"temperature_sensor_high\":%.1f,", temp_sensor_get_high()/100.0);
+      strcat(payload, tmp);
+      sprintf(tmp, "\"temperature_sensor_count\":%d,", temp_sensor_get_count());
+      strcat(payload, tmp);
+      uint8_t i = 0;
+      do
+      {
+        sprintf(tmp, "\"temperature_sensor_%d\":%.1f,", i+1, tma_temps[i]/100.0);
+        strcat(payload, tmp);
+        prev_tma_temps[i] = tma_temps[i];
+        if ((++i) == ARRAY_SIZE(tma_temps)) {
+            strcat(payload, "}");
+        }
+        else {
+            strcat(payload, ",");
+        }
+      } while ( i < ARRAY_SIZE(tma_temps));
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      prev_tma_err = tma_err;
+      prev_tma_low = tma_low;
+      prev_tma_high = tma_high;
+      prev_tma_cnt = tma_cnt;
+  }
 
   // Socket lock status
-  sprintf(topic, "%s/lck", mqtt_main_topic);
-  sprintf(payload, "%s", socket_lock_status_to_str(socket_lock_get_status()));
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+  static socket_lock_status_t prev_lck = 0;
+  socket_lock_status_t lck = socket_lock_get_status();
+  if (force || (lck != prev_lck)) {
+      sprintf(topic, "%s/lck", mqtt_main_topic);
+      sprintf(payload, "%s", socket_lock_status_to_str(lck));
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      prev_lck = lck;
+  }
 
 }
 
-static void mqtt_publish_evse_number_data(esp_mqtt_client_handle_t client) {
+static void mqtt_publish_evse_number_data(esp_mqtt_client_handle_t client, bool force) {
 
   char topic[64];
   char payload[512];
 
   // Maximum current limit
-  sprintf(topic, "%s/ama", mqtt_main_topic);
-  sprintf(payload, "%d", evse_get_max_charging_current());
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+  static uint8_t prev_ama = 0;
+  uint8_t ama = evse_get_max_charging_current();
+  if (force || (ama != prev_ama)) {
+      sprintf(topic, "%s/ama", mqtt_main_topic);
+      sprintf(payload, "%d", ama);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      prev_ama = ama;
+  }
 
   // Requested current
-  sprintf(topic, "%s/amp", mqtt_main_topic);
-  sprintf(payload, "%f", evse_get_charging_current()/10.0);
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+  static uint16_t prev_amp = 0;
+  uint16_t amp = evse_get_charging_current();
+  if (force || (amp != prev_amp)) {
+      sprintf(topic, "%s/amp", mqtt_main_topic);
+      sprintf(payload, "%f", amp/10.0);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      prev_amp = amp;
+  }
 
   // Current temperature limit
-  sprintf(topic, "%s/amt", mqtt_main_topic);
-  sprintf(payload, "%d", evse_get_temp_threshold());
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+  static uint8_t prev_amt = 0;
+  uint8_t amt = evse_get_temp_threshold();
+  if (force || (amt != prev_amt)) {
+      sprintf(topic, "%s/amt", mqtt_main_topic);
+      sprintf(payload, "%d", amt);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      prev_amt = amt;
+  }
 
   // Automatic stop energy
-  sprintf(topic, "%s/ate", mqtt_main_topic);
-  sprintf(payload, "%f", evse_get_consumption_limit()/1000.0);
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+  static uint32_t prev_ate = 0;
+  uint32_t ate = evse_get_consumption_limit();
+  if (force || (ate != prev_ate)) {
+      sprintf(topic, "%s/ate", mqtt_main_topic);
+      sprintf(payload, "%f", ate/1000.0);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      prev_ate = ate;
+  }
 
   // Automatic stop time
-  sprintf(topic, "%s/att", mqtt_main_topic);
-  sprintf(payload, "%f", evse_get_charging_time_limit()/60.0);
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+  static uint32_t prev_att = 0;
+  uint32_t att = evse_get_charging_time_limit();
+  if (force || (att != prev_att)) {
+      sprintf(topic, "%s/att", mqtt_main_topic);
+      sprintf(payload, "%f", att/60.0);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      prev_att = att;
+  }
 
   // Under power limit
-  sprintf(topic, "%s/upl", mqtt_main_topic);
-  sprintf(payload, "%f", evse_get_under_power_limit()/1000.0);
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+  static uint16_t prev_upl = 0;
+  uint16_t upl = evse_get_under_power_limit();
+  if (force || (upl != prev_upl)) {
+      sprintf(topic, "%s/upl", mqtt_main_topic);
+      sprintf(payload, "%f", upl/1000.0);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      prev_upl = upl;
+  }
 
   // Default automatic stop energy
-  sprintf(topic, "%s/date", mqtt_main_topic);
-  sprintf(payload, "%f", evse_get_default_consumption_limit()/1000.0);
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+  static uint32_t prev_date = 0;
+  uint32_t date = evse_get_default_consumption_limit();
+  if (force || (date != prev_date)) {
+      sprintf(topic, "%s/date", mqtt_main_topic);
+      sprintf(payload, "%f", date/1000.0);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      prev_date = date;
+  }
 
   // Default automatic stop time
-  sprintf(topic, "%s/datt", mqtt_main_topic);
-  sprintf(payload, "%f", evse_get_default_charging_time_limit()/60.0);
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+  static uint32_t prev_datt = 0;
+  uint32_t datt = evse_get_default_charging_time_limit();
+  if (force || (datt != prev_datt)) {
+      sprintf(topic, "%s/datt", mqtt_main_topic);
+      sprintf(payload, "%f", datt/60.0);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      prev_datt = datt;
+  }
 
   // Default under power limit
-  sprintf(topic, "%s/dupl", mqtt_main_topic);
-  sprintf(payload, "%f", evse_get_default_under_power_limit()/1000.0);
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+  static uint16_t prev_dupl = 0;
+  uint16_t dupl = evse_get_default_under_power_limit();
+  if (force || (dupl != prev_dupl)) {
+      sprintf(topic, "%s/dupl", mqtt_main_topic);
+      sprintf(payload, "%f", dupl/1000.0);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      prev_dupl = dupl;
+  }
 
   // AC Voltage
-  sprintf(topic, "%s/acv", mqtt_main_topic);
-  sprintf(payload, "%d", energy_meter_get_ac_voltage());
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+  static uint16_t prev_acv = 0;
+  uint16_t acv = energy_meter_get_ac_voltage();
+  if (force || (acv != prev_acv)) {
+      sprintf(topic, "%s/acv", mqtt_main_topic);
+      sprintf(payload, "%d", acv);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      prev_acv = acv;
+  }
 }
 
-static void mqtt_publish_evse_select_data(esp_mqtt_client_handle_t client) {
+static void mqtt_publish_evse_select_data(esp_mqtt_client_handle_t client, bool force) {
 
   char topic[64];
   char payload[512];
 
   // Energy meter mode
-  sprintf(topic, "%s/emm", mqtt_main_topic);
-  sprintf(payload, "%s", energy_meter_mode_to_str_mqtt(energy_meter_get_mode()));
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+  static energy_meter_mode_t prev_emm = 0;
+  energy_meter_mode_t emm = energy_meter_get_mode();
+  if (force || (emm != prev_emm)) {
+      sprintf(topic, "%s/emm", mqtt_main_topic);
+      sprintf(payload, "%s", energy_meter_mode_to_str_mqtt(emm));
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      prev_emm = emm;
+  }
 }
 
-static void mqtt_publish_evse_switch_data(esp_mqtt_client_handle_t client) {
+static void mqtt_publish_evse_switch_data(esp_mqtt_client_handle_t client, bool force) {
 
   char topic[64];
   char payload[512];
 
   // Set charger state
-  sprintf(topic, "%s/scs", mqtt_main_topic);
-  sprintf(payload, "%s", evse_is_enabled()? "ON": "OFF");
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+  static bool prev_scs = 0;
+  bool scs = evse_is_enabled();
+  if (force || (scs != prev_scs)) {
+      sprintf(topic, "%s/scs", mqtt_main_topic);
+      sprintf(payload, "%s", evse_is_enabled()? "ON": "OFF");
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      prev_scs = scs;
+  }
 
   // Card authorization required
-  sprintf(topic, "%s/acs", mqtt_main_topic);
-  sprintf(payload, "%s", evse_is_require_auth()? "ON": "OFF");
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+  static bool prev_acs = 0;
+  bool acs = evse_is_require_auth();
+  if (force || (acs != prev_acs)) {
+      sprintf(topic, "%s/acs", mqtt_main_topic);
+      sprintf(payload, "%s", acs? "ON": "OFF");
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      prev_acs = acs;
+  }
 
   // Socket outlet
-  sprintf(topic, "%s/sol", mqtt_main_topic);
-  sprintf(payload, "%s", evse_get_socket_outlet()? "ON": "OFF");
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+  static bool prev_sol = 0;
+  bool sol = evse_get_socket_outlet();
+  if (force || (sol != prev_sol)) {
+      sprintf(topic, "%s/sol", mqtt_main_topic);
+      sprintf(payload, "%s", sol? "ON": "OFF");
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      prev_sol = sol;
+  }
 
   // Socket outlet
-  sprintf(topic, "%s/pol", mqtt_main_topic);
-  sprintf(payload, "%s", power_outlet_get_state()? "ON": "OFF");
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+  static bool prev_pol = 0;
+  bool pol = power_outlet_get_state();
+  if (force || (pol != prev_pol)) {
+      sprintf(topic, "%s/pol", mqtt_main_topic);
+      sprintf(payload, "%s", pol? "ON": "OFF");
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      prev_pol = pol;
+  }
 }
 
 static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_t event_id, void* event_data)
@@ -760,11 +954,11 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
         ESP_LOGI(TAG, "MQTT Connected");
         mqtt_subscribe_send_ha_discovery(client);
         mqtt_publish_static_data(client);
-        mqtt_publish_system_data(client);
-        mqtt_publish_evse_sensor_data(client);
-        mqtt_publish_evse_number_data(client);
-        mqtt_publish_evse_select_data(client);
-        mqtt_publish_evse_switch_data(client);
+        mqtt_publish_system_data(client, true);
+        mqtt_publish_evse_sensor_data(client, true);
+        mqtt_publish_evse_number_data(client, true);
+        mqtt_publish_evse_select_data(client, true);
+        mqtt_publish_evse_switch_data(client, true);
         break;
     case MQTT_EVENT_DISCONNECTED:
         ESP_LOGI(TAG, "MQTT Disconnected");
@@ -782,7 +976,7 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
 
             if (mqtt_value_set_handlers[i].handler) {
                     mqtt_value_set_handlers[i].handler(data);
-                    mqtt_publish_evse_switch_data(client);
+                    mqtt_publish_evse_switch_data(client, true);
                 }
                 break;
             }
@@ -839,26 +1033,25 @@ static void mqtt_task_func(void* param)
         ESP_LOGE(TAG, "client start failed!");
     }
 
-    uint8_t static_data_publish_counter = 0;
+    uint32_t static_data_publish_counter = 0;
+    bool force = false;
     while (true) {
         vTaskDelay(pdMS_TO_TICKS(1000));
 
         static_data_publish_counter++;
-        
-        if ((static_data_publish_counter % 10) == 2) {
-            mqtt_publish_system_data(client);
+
+        int64_t start = esp_timer_get_time();
+        if ((static_data_publish_counter % FORCE_UPDATE_SECONDS) == 0) {
+            force = true;
         }
-        else if ((static_data_publish_counter % 10) == 4) {
-            mqtt_publish_evse_sensor_data(client);
-        }
-        else if ((static_data_publish_counter % 10) == 6) {
-            mqtt_publish_evse_number_data(client);
-        }
-        else if ((static_data_publish_counter % 10) == 8) {
-            mqtt_publish_evse_select_data(client);
-        }
-        else if ((static_data_publish_counter % 10) == 0) {
-            mqtt_publish_evse_switch_data(client);
+        if ((static_data_publish_counter % 10) == 0) {
+            mqtt_publish_system_data(client, force);
+            mqtt_publish_evse_sensor_data(client, force);
+            mqtt_publish_evse_number_data(client, force);
+            mqtt_publish_evse_select_data(client, force);
+            mqtt_publish_evse_switch_data(client, force);
+            ESP_LOGI(TAG, "update time=%lld", (esp_timer_get_time()-start));
+            force = false;
         }
     }
 }
