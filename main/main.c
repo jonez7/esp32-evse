@@ -35,6 +35,8 @@ static const char* TAG = "app_main";
 
 static evse_state_t led_state = -1;
 
+static bool evse_enabled = false;
+
 static void reset_and_reboot(void)
 {
     ESP_LOGW(TAG, "All settings will be erased...");
@@ -160,12 +162,18 @@ static bool ota_diagnostic(void)
 
 static void update_leds(void)
 {
-    if (led_state != evse_get_state()) {
+    if ((led_state != evse_get_state()) || (evse_enabled != evse_is_enabled())) {
         led_state = evse_get_state();
+        evse_enabled = evse_is_enabled();
 
         switch (led_state) {
         case EVSE_STATE_A:
-            led_set_off(LED_ID_CHARGING);
+            if (evse_enabled && !board_config.led_error) {
+                led_set_on(LED_ID_CHARGING);
+            }
+            else {
+                led_set_off(LED_ID_CHARGING);
+            }
             led_set_off(LED_ID_ERROR);
             addressable_led_set_rgb(ADDRESSABLE_LED_READY);
             break;
@@ -188,7 +196,12 @@ static void update_leds(void)
             addressable_led_set_rgb(ADDRESSABLE_LED_CHARGING);
             break;
         case EVSE_STATE_E:
-            led_set_off(LED_ID_CHARGING);
+            if (evse_enabled && !board_config.led_error) {
+                led_set_state(LED_ID_CHARGING,100,100);
+            }
+            else {
+                led_set_off(LED_ID_CHARGING);
+            }
             led_set_on(LED_ID_ERROR);
             addressable_led_set_rgb(ADDRESSABLE_LED_ERROR);
             break;
