@@ -49,4 +49,13 @@ void button_init(void);
  */
 void button_set_handler(button_id_t button_id, button_activity_handler handler, button_handler_t type);
 
+/**
+ * @brief Set button state
+ * 
+ * @param button_id id of button
+ * @param enabled enable/disable button action
+
+ */
+void button_set_button_state(button_id_t button_id, bool enabled);
+
 #endif /* BUTTON_H_ */
