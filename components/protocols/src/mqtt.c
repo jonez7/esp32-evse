@@ -17,6 +17,7 @@
 #include "temp_sensor.h"
 #include "proximity.h"
 #include "power_outlet.h"
+#include "button.h"
 
 #define LWT_TOPIC        "state"
 #define LWT_CONNECTED    "online"
@@ -441,6 +442,18 @@ static void mqtt_aux_set_power_outlet(char* data) {
     power_outlet_set_state(strcmp(data, "ON")==0 ? true : false);
 }
 
+// Aux power outlet / enb
+static void mqtt_enable_disable_buttons(char* data) {
+    bool enabled = strcmp(data, "ON")==0 ? true : false;
+
+    if (board_config.button_evse_enable) {
+        button_set_button_state(BUTTON_ID_EVSE_ENABLE, enabled);
+    }
+    if (board_config.button_aux1) {
+        button_set_button_state(BUTTON_ID_AUX1, enabled);
+    }
+}
+
 // Restart the device
 static void mqtt_evse_reboot(char* data) {
     evse_set_available(false);
@@ -501,6 +514,7 @@ static void mqtt_subscribe_send_ha_discovery(esp_mqtt_client_handle_t client) {
     mqtt_cfg_switch(client, "acs", "Card authorization required", ""                   , "switch"    , mqtt_evse_set_require_auth);
     mqtt_cfg_switch(client, "sol", "Socket outlet"              , "mdi:ev-plug-type2"  , "switch"    , mqtt_evse_set_socket_outlet);
     mqtt_cfg_switch(client, "pol", "Aux power outlet"           , "mdi:power-socket-eu", "switch"    , mqtt_aux_set_power_outlet);
+    mqtt_cfg_switch(client, "enb", "Enable/Disable buttons"     , ""                   , "switch"    , mqtt_enable_disable_buttons);
 
     // Button:                  Field| User Friendly Name  | Icon| Device Class| Value Set Handler
     mqtt_cfg_button(client, "restart", "Restart the device", ""  , "restart"   , mqtt_evse_reboot);

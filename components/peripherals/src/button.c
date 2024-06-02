@@ -26,6 +26,7 @@ static struct button_s
     TickType_t press_tick;
     button_handler_t activity_type;
     button_activity_handler handler;
+    bool enabled;
 } buttons[BUTTON_ID_MAX];
 
 static void IRAM_ATTR button_isr_handler(void* arg)
@@ -59,8 +60,9 @@ static void user_input_task_func(void* param)
                 if (BIT_PRESSED == state) {
                     buttons[button_idx].press_tick = xTaskGetTickCount();
                     buttons[button_idx].pressed = true;
-                    if ((buttons[button_idx].activity_type & BUTTON_HANDLER_PRESSED)
-                        && buttons[button_idx].handler) {
+                    if ((buttons[button_idx].activity_type & BUTTON_HANDLER_PRESSED) &&
+                        buttons[button_idx].handler &&
+                        buttons[button_idx].enabled) {
                         buttons[button_idx].handler(buttons[button_idx].press_tick);
                     }
                 }
@@ -69,7 +71,8 @@ static void user_input_task_func(void* param)
                     // without preceding PRESS_BIT
                     if (buttons[button_idx].pressed &&
                         (buttons[button_idx].activity_type & BUTTON_HANDLER_RELEASED) &&
-                        buttons[button_idx].handler) {
+                        buttons[button_idx].handler &&
+                        buttons[button_idx].enabled) {
                         buttons[button_idx].handler(buttons[button_idx].press_tick);
                     }
                     buttons[button_idx].pressed = false;
@@ -94,6 +97,7 @@ void button_init(void)
         buttons[i].press_tick = 0;
         buttons[i].activity_type = BUTTON_HANDLER_NONE;
         buttons[i].handler = NULL;
+        buttons[i].enabled = false;
     }
 
     gpio_config_t io_conf =  {
@@ -135,9 +139,21 @@ void button_set_handler(button_id_t button_id, button_activity_handler handler, 
     if (buttons[button_id].gpio != GPIO_NUM_NC) {
         buttons[button_id].handler = handler;
         buttons[button_id].activity_type = type;
+        buttons[button_id].enabled = true;
         ESP_LOGD(TAG, "Set pressed handler button %d handler %x type %d", button_id, (unsigned int)handler, type);
     }
     else {
         ESP_LOGE(TAG, "Cannot set pressed handler! Button %d not configured", button_id);
+    }
+}
+
+void button_set_button_state(button_id_t button_id, bool enabled)
+{
+    if (buttons[button_id].gpio != GPIO_NUM_NC) {
+        buttons[button_id].enabled = enabled;
+        ESP_LOGD(TAG, "Set button state, button %d new_state %d", button_id, enabled);
+    }
+    else {
+        ESP_LOGE(TAG, "Cannot set button state! Button %d not configured", button_id);
     }
 }
