@@ -29,6 +29,8 @@ menu "EVSE Configuration"
 			bool "oulware"
 		config BOARD_CONFIG_OULWAREWBOX
 			bool "oulwarewbox"
+		config BOARD_CONFIG_OULWAREWBOX2
+			bool "oulwarewbox2"
 	endchoice
 
 	config BOARD_CONFIG
@@ -41,5 +43,6 @@ menu "EVSE Configuration"
 		default "custom" if BOARD_CONFIG_CUSTOM
 		default "oulware" if BOARD_CONFIG_OULWARE
 		default "oulwarewbox" if BOARD_CONFIG_OULWAREWBOX
+		default "oulwarewbox2" if BOARD_CONFIG_OULWAREWBOX2
 
 endmenu
