@@ -582,6 +582,31 @@ const char* evse_state_to_str(evse_state_t state)
     }
 }
 
+const char* evse_state_to_str_long(evse_state_t state)
+{
+    switch (state) {
+    case EVSE_STATE_A:
+        return "A - Ready";
+    case EVSE_STATE_B1:
+        return "B1 - Vehicle connected, not ready/EVSE not ready";
+    case  EVSE_STATE_B2:
+        return "B2 - Vehicle connected, not ready/EVSE ready";
+    case EVSE_STATE_C1:
+        return "C1 - Vehicle connected, ready/EVSE not ready";
+    case EVSE_STATE_C2:
+        return "C2 - Vehicle connected, ready/EVSE ready";
+    case EVSE_STATE_D1:
+        return "D1 - Vehicle connected, ready with ventilation/EVSE not ready";
+    case EVSE_STATE_D2:
+        return "D2 - Vehicle connected, ready with ventilation/EVSE ready";
+    case  EVSE_STATE_E:
+        return "E - No power (shut off)";
+    case EVSE_STATE_F:
+        return "F - Error";
+    default: return NULL;
+    }
+}
+
 uint32_t evse_get_error(void)
 {
     return error;
