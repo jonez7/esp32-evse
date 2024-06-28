@@ -49,7 +49,7 @@ static char mqtt_lwt_topic[64];
 
 static uint8_t mqtt_value_set_handler_count = 0;
 
-static struct mqtt_value_set_handlers_funcs mqtt_value_set_handlers[16];
+static struct mqtt_value_set_handlers_funcs mqtt_value_set_handlers[18];
 
 static int replacechar(char *str, char orig, char rep)
 {
@@ -720,7 +720,7 @@ static void mqtt_publish_evse_sensor_data(esp_mqtt_client_handle_t client, bool 
   evse_state_t status = evse_get_state();
   if (force || (status != prev_status)) {
       sprintf(topic, "%s/status", mqtt_main_topic);
-      sprintf(payload, "%s", evse_state_to_str(status));
+      sprintf(payload, "%s", evse_state_to_str_long(status));
       esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
       prev_status = status;
   }
@@ -1064,7 +1064,7 @@ static void mqtt_task_func(void* param)
             mqtt_publish_evse_number_data(client, force);
             mqtt_publish_evse_select_data(client, force);
             mqtt_publish_evse_switch_data(client, force);
-            ESP_LOGI(TAG, "update time=%lld", (esp_timer_get_time()-start));
+            ESP_LOGD(TAG, "update time=%lld", (esp_timer_get_time()-start));
             force = false;
         }
     }

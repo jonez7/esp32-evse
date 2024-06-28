@@ -84,6 +84,14 @@ evse_state_t evse_get_state(void);
 const char *evse_state_to_str(evse_state_t state);
 
 /**
+ * @brief Format to string value and decsribtion
+ * 
+ * @param state 
+ * @return const char 
+ */
+const char *evse_state_to_str_long(evse_state_t state);
+
+/**
  * @brief Return error bits when state is EVSE_STATE_E
  *
  * @return uint32_t
