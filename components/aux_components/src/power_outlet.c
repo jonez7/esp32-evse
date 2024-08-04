@@ -4,17 +4,35 @@
 
 #include "power_outlet.h"
 #include "aux_relay.h"
+#include "nvs.h"
 #include "board_config.h"
 #include "led.h"
 #include "button.h"
 
+#define NVS_NAMESPACE          "power_outlet"
+#define NVS_POWER_OUTLET_STATE "state"
+
 static const char* TAG = "power_outlet";
+
+static nvs_handle_t nvs;
 
 static TaskHandle_t power_outlet_task;
 
 static bool button_available = false;
 
 static bool led_available = false;
+
+static void power_outlet_relay_and_led(uint8_t state)
+{
+    if (state) {
+        aux_relay_set_state(true);
+        led_set_on(LED_ID_AUX1);
+    }
+    else {
+        aux_relay_set_state(false);
+        led_set_off(LED_ID_AUX1);
+    }
+}
 
 static void power_outlet_button_press_handler(TickType_t press_time)
 {
@@ -30,18 +48,23 @@ static void power_outlet_button_press_handler(TickType_t press_time)
 static void power_outlet_task_func(void* param)
 {
     uint32_t state;
+    uint8_t prev_state = 0;
+
+    ESP_ERROR_CHECK(nvs_open(NVS_NAMESPACE, NVS_READWRITE, &nvs));
+
+    if (nvs_get_u8(nvs, NVS_POWER_OUTLET_STATE, &prev_state) == ESP_OK) {
+        ESP_LOGD(TAG, "Initial nvs read succesful, setting state %d\n", prev_state);
+        power_outlet_relay_and_led(prev_state);
+    }
 
     while (true) {
         if (xTaskNotifyWait(0x00, 0xff, &state, portMAX_DELAY)) {
 
-            if (state) {
-                aux_relay_set_state(true);
-                led_set_on(LED_ID_AUX1);
-            }
-            else {
-                aux_relay_set_state(false);
-                led_set_off(LED_ID_AUX1);
-            }
+            power_outlet_relay_and_led((uint8_t)state);
+
+            nvs_set_u8(nvs, NVS_POWER_OUTLET_STATE, (uint8_t)state);
+            nvs_commit(nvs);
+
             ESP_LOGD(TAG, "Task, state: %"PRIu32, state);
         }
     }
@@ -67,7 +90,7 @@ void power_outlet_init(void)
         }
         ESP_LOGD(TAG, "Avalability status button=%d led=%d", button_available, led_available);
 
-        xTaskCreate(power_outlet_task_func, "power_outlet_task", 1 * 1024, NULL, 5, &power_outlet_task);
+        xTaskCreate(power_outlet_task_func, "power_outlet_task", 2 * 1024, NULL, 5, &power_outlet_task);
     }
 }
 
