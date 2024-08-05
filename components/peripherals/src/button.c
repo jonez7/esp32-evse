@@ -77,7 +77,7 @@ static void user_input_task_func(void* param)
                     }
                     buttons[button_idx].pressed = false;
                 }
-                ESP_LOGD(TAG, "Button notfification=0x%08"PRIx32": button=%d state=%d pressed=%d", 
+                ESP_LOGD(TAG, "Button notfification=0x%08"PRIx32": button=%d state=%d pressed=%d",
                     notification,
                     (int)button_idx,
                     (int)(state),
@@ -149,11 +149,19 @@ void button_set_handler(button_id_t button_id, button_activity_handler handler, 
 
 void button_set_button_state(button_id_t button_id, bool enabled)
 {
-    if (buttons[button_id].gpio != GPIO_NUM_NC) {
+    if (button_id < BUTTON_ID_MAX && buttons[button_id].gpio != GPIO_NUM_NC) {
         buttons[button_id].enabled = enabled;
         ESP_LOGD(TAG, "Set button state, button %d new_state %d", button_id, enabled);
     }
     else {
         ESP_LOGE(TAG, "Cannot set button state! Button %d not configured", button_id);
     }
+}
+
+bool button_get_button_state(button_id_t const button_id)
+{
+    if (button_id < BUTTON_ID_MAX && buttons[button_id].gpio != GPIO_NUM_NC) {
+        return buttons[button_id].enabled;
+    }
+    return false;
 }

@@ -5,7 +5,7 @@
 
 /**
  * @brief Button ID
- * 
+ *
  */
 typedef enum
 {
@@ -17,7 +17,7 @@ typedef enum
 
 /**
  * @brief Handler register types
- * 
+ *
  */
 typedef enum
 {
@@ -36,13 +36,13 @@ typedef void (*button_activity_handler)(TickType_t press_time);
 
 /**
  * @brief Initialize button
- * 
+ *
  */
 void button_init(void);
 
 /**
  * @brief Set button handler
- * 
+ *
  * @param button_id id of button
  * @param handler for button pressed activity
  * @param type which kind of activity to trigger
@@ -51,11 +51,19 @@ void button_set_handler(button_id_t button_id, button_activity_handler handler, 
 
 /**
  * @brief Set button state
- * 
+ *
  * @param button_id id of button
  * @param enabled enable/disable button action
-
  */
 void button_set_button_state(button_id_t button_id, bool enabled);
+
+/**
+ * @brief Get button state
+ *
+ * @param button_id id of button
+ *
+ * @return true if button is enable
+ */
+bool button_get_button_state(button_id_t button_id);
 
 #endif /* BUTTON_H_ */

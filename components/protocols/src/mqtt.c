@@ -76,7 +76,7 @@ static void mqtt_subscribe_set_function(
         mqtt_value_set_handler_count++;
     }
     else {
-        ESP_LOGI(TAG, "Handler table overflow! Cannot set handler for topic %s", topic);
+        ESP_LOGE(TAG, "Handler table overflow! Cannot set handler for topic %s", topic);
     }
 }
 
@@ -93,7 +93,7 @@ static void mqtt_config_common_part(
 
     wifi_get_ip(tmp);
 
-    sprintf(payload, 
+    sprintf(payload,
         "{"                                                 // 0
         "\"~\": \"%s\","                                    // 1
         "\"object_id\": \"%s_%s\","                         // 2
@@ -130,7 +130,7 @@ static void mqtt_config_common_part(
     if (unique_nbr) {
         sprintf(tmp, ",\"unique_id\": \"%s-%s-%d\"", mqtt_main_id, field, unique_nbr);
         strcat(payload, tmp);
-              
+
     }
     else {
         sprintf(tmp ,",\"unique_id\": \"%s-%s\"", mqtt_main_id, field );
@@ -157,7 +157,8 @@ static void mqtt_cfg_sensor(
     char* unit,
     char* device_class,
     char* state_class,
-    char* entity_category)
+    char* entity_category,
+    bool isfloat)
 {
     if (board_config.mqtt_homeassistant_discovery) {
 
@@ -196,9 +197,10 @@ static void mqtt_cfg_sensor(
             strcpy(tmp, name);
             strcpy(name_mod, strlwr(tmp));
             replacechar(name_mod, ' ', '_');
-            sprintf(tmp, ",\"value_template\": \"{{ value_json.%s }}\"", name_mod);
+            sprintf(tmp, ",\"value_template\": \"{{ value_json.%s%s }}\"",
+                    name_mod, (isfloat ? " | float" : ""));
             strcat(payload, tmp);
-        } 
+        }
 
         strcat(payload, "}");
 
@@ -311,7 +313,7 @@ static void mqtt_cfg_switch(
         char payload[1000];
         char tmp[100];
 
-        /* See https://www.home-assistant.io/docs/mqtt/discovery/ and 
+        /* See https://www.home-assistant.io/docs/mqtt/discovery/ and
          *     https://www.home-assistant.io/integrations/switch.mqtt/ */
         sprintf(discovery_topic, "homeassistant/switch/%s/%s/config", mqtt_main_topic, field);
 
@@ -346,7 +348,7 @@ static void mqtt_cfg_button(
         char payload[1000];
         char tmp[100];
 
-        /* See https://www.home-assistant.io/docs/mqtt/discovery/ and 
+        /* See https://www.home-assistant.io/docs/mqtt/discovery/ and
          *     https://www.home-assistant.io/integrations/button.mqtt/ */
         sprintf(discovery_topic, "homeassistant/button/%s/%s/config", mqtt_main_topic, field);
 
@@ -462,37 +464,47 @@ static void mqtt_evse_reboot(char* data) {
 
 static void mqtt_subscribe_send_ha_discovery(esp_mqtt_client_handle_t client) {
 
+    uint8_t const tma_cnt = temp_sensor_get_count();
+
     // System Sensors:  Group| Field   | User Friendly Name           | Icon                          | Unit | Device Class        | State Class       | Entity category
-    mqtt_cfg_sensor(client, 0, "rbt"   , "Uptime"                     , "mdi:clock-time-eight-outline", "s"  , ""                  , ""                , "diagnostic");
-    mqtt_cfg_sensor(client, 0, "mac"   , "MAC Address"                , "mdi:network-outline"         , ""   , ""                  , ""                , "diagnostic");
-    mqtt_cfg_sensor(client, 0, "ip"    , "IP Adress"                  , "mdi:network-outline"         , ""   , ""                  , ""                , "diagnostic");
-    mqtt_cfg_sensor(client, 0, "fme"   , "Free Heap Memory"           , "mdi:memory"                  , "B"  , ""                  , "measurement"     , "diagnostic");
-    mqtt_cfg_sensor(client, 0, "rssi"  , "Wi-Fi RSSI"                 , "mdi:wifi"                    , "dBm", "signal_strength"   , "measurement"     , "diagnostic");
-    mqtt_cfg_sensor(client, 0, "tmc"   , "CPU Temperature"            , "mdi:thermometer"             , "°C" , "temperature"       , "measurement"     , "diagnostic");
+    mqtt_cfg_sensor(client, 0, "rbt"   , "Uptime"                     , "mdi:clock-time-eight-outline", "s"  , ""                  , ""                , "diagnostic", false);
+    mqtt_cfg_sensor(client, 0, "mac"   , "MAC Address"                , "mdi:network-outline"         , ""   , ""                  , ""                , "diagnostic", false);
+    mqtt_cfg_sensor(client, 0, "ip"    , "IP Adress"                  , "mdi:network-outline"         , ""   , ""                  , ""                , "diagnostic", false);
+    mqtt_cfg_sensor(client, 0, "fme"   , "Free Heap Memory"           , "mdi:memory"                  , "B"  , ""                  , "measurement"     , "diagnostic", false);
+    mqtt_cfg_sensor(client, 0, "rssi"  , "Wi-Fi RSSI"                 , "mdi:wifi"                    , "dBm", "signal_strength"   , "measurement"     , "diagnostic", false);
+    mqtt_cfg_sensor(client, 0, "tmc"   , "CPU Temperature"            , "mdi:thermometer"             , "°C" , "temperature"       , "measurement"     , "diagnostic", false);
 
     // EVSE Sensors:    Group| Field   | User Friendly Name           | Icon                          | Unit | Device Class        | State Class       | Entity category
-    mqtt_cfg_sensor(client, 0, "cbl"   , "Cable maximum current"      , ""                            , "A"  , "current"           , "measurement"     , "");
-    mqtt_cfg_sensor(client, 0, "ccs"   , "Current charger state"      , "mdi:auto-fix"                , ""   , ""                  , ""                , "");
-    mqtt_cfg_sensor(client, 0, "cdi"   , "Charging duration"          , "mdi:timer-outline"           , "s"  , ""                  , "measurement"     , "");
-    mqtt_cfg_sensor(client, 0, "err"   , "Error code"                 , "mdi:alert-circle-outline"    , ""   , ""                  , ""                , "");
-    mqtt_cfg_sensor(client, 0, "eto"   , "Total energy"               , ""                            , "Wh" , "energy"            , "total_increasing", "");
-    mqtt_cfg_sensor(client, 0, "lst"   , "Last session time"          , "mdi:counter"                 , "s"  , ""                  , "measurement"     , "");
-    mqtt_cfg_sensor(client, 1, "nrg"   , "Voltage L1"                 , ""                            , "V"  , "voltage"           , "measurement"     , "");
-    mqtt_cfg_sensor(client, 2, "nrg"   , "Voltage L2"                 , ""                            , "V"  , "voltage"           , "measurement"     , "");
-    mqtt_cfg_sensor(client, 3, "nrg"   , "Voltage L3"                 , ""                            , "V"  , "voltage"           , "measurement"     , "");
-    mqtt_cfg_sensor(client, 4, "nrg"   , "Current L1"                 , ""                            , "A"  , "current"           , "measurement"     , "");
-    mqtt_cfg_sensor(client, 5, "nrg"   , "Current L2"                 , ""                            , "A"  , "current"           , "measurement"     , "");
-    mqtt_cfg_sensor(client, 6, "nrg"   , "Current L3"                 , ""                            , "A"  , "current"           , "measurement"     , "");
-    mqtt_cfg_sensor(client, 7, "nrg"   , "Current power"              , ""                            , "W"  , "power"             , "measurement"     , "");
-    mqtt_cfg_sensor(client, 0, "rcd"   , "Residual current detection" , "mdi:current-dc"              , ""   , ""                  , ""                , "");
-    mqtt_cfg_sensor(client, 0, "status", "Status"                     , "mdi:heart-pulse"             , ""   , ""                  , ""                , "");
-    mqtt_cfg_sensor(client, 1, "tma"   , "Temperature sensor error"   , ""                            , ""   , ""                  , ""                , "");
-    mqtt_cfg_sensor(client, 2, "tma"   , "Temperature sensor low"     , ""                            , "°C" , "temperature"       , "measurement"     , "");
-    mqtt_cfg_sensor(client, 3, "tma"   , "Temperature sensor high"    , ""                            , "°C" , "temperature"       , "measurement"     , "");
-    mqtt_cfg_sensor(client, 4, "tma"   , "Temperature sensor count"   , ""                            , ""   , ""                  , ""                , "");
-    mqtt_cfg_sensor(client, 5, "tma"   , "Temperature sensor 1"       , ""                            , "°C" , "temperature"       , "measurement"     , "");
-    mqtt_cfg_sensor(client, 6, "tma"   , "Temperature sensor 2"       , ""                            , "°C" , "temperature"       , "measurement"     , "");
-    mqtt_cfg_sensor(client, 0, "lck"   , "Socket lock status"         , "mdi:lock-question"           , ""   , ""                  , ""                , "");
+    mqtt_cfg_sensor(client, 0, "cbl"   , "Cable maximum current"      , ""                            , "A"  , "current"           , "measurement"     , "", false);
+    mqtt_cfg_sensor(client, 0, "ccs"   , "Current charger state"      , "mdi:auto-fix"                , ""   , ""                  , ""                , "", false);
+    mqtt_cfg_sensor(client, 0, "cdi"   , "Charging duration"          , "mdi:timer-outline"           , "s"  , ""                  , "measurement"     , "", false);
+    mqtt_cfg_sensor(client, 0, "err"   , "Error code"                 , "mdi:alert-circle-outline"    , ""   , ""                  , ""                , "", false);
+    mqtt_cfg_sensor(client, 0, "eto"   , "Total energy"               , ""                            , "Wh" , "energy"            , "total_increasing", "", false);
+    mqtt_cfg_sensor(client, 0, "lst"   , "Last session time"          , "mdi:counter"                 , "s"  , ""                  , "measurement"     , "", false);
+    mqtt_cfg_sensor(client, 1, "nrg"   , "Voltage L1"                 , ""                            , "V"  , "voltage"           , "measurement"     , "", false);
+    mqtt_cfg_sensor(client, 2, "nrg"   , "Voltage L2"                 , ""                            , "V"  , "voltage"           , "measurement"     , "", false);
+    mqtt_cfg_sensor(client, 3, "nrg"   , "Voltage L3"                 , ""                            , "V"  , "voltage"           , "measurement"     , "", false);
+    mqtt_cfg_sensor(client, 4, "nrg"   , "Current L1"                 , ""                            , "A"  , "current"           , "measurement"     , "", false);
+    mqtt_cfg_sensor(client, 5, "nrg"   , "Current L2"                 , ""                            , "A"  , "current"           , "measurement"     , "", false);
+    mqtt_cfg_sensor(client, 6, "nrg"   , "Current L3"                 , ""                            , "A"  , "current"           , "measurement"     , "", false);
+    mqtt_cfg_sensor(client, 7, "nrg"   , "Current power"              , ""                            , "W"  , "power"             , "measurement"     , "", false);
+    mqtt_cfg_sensor(client, 0, "rcd"   , "Residual current detection" , "mdi:current-dc"              , ""   , ""                  , ""                , "", false);
+    mqtt_cfg_sensor(client, 0, "status", "Status"                     , "mdi:heart-pulse"             , ""   , ""                  , ""                , "", false);
+    mqtt_cfg_sensor(client, 1, "tma"   , "Temperature sensor error"   , ""                            , ""   , ""                  , ""                , "", false);
+    mqtt_cfg_sensor(client, 2, "tma"   , "Temperature sensor low"     , ""                            , "°C" , "temperature"       , "measurement"     , "", true);
+    mqtt_cfg_sensor(client, 3, "tma"   , "Temperature sensor high"    , ""                            , "°C" , "temperature"       , "measurement"     , "", true);
+    mqtt_cfg_sensor(client, 4, "tma"   , "Temperature sensor count"   , ""                            , ""   , ""                  , ""                , "", false);
+    if (tma_cnt)
+        mqtt_cfg_sensor(client, 5, "tma"   , "Temperature sensor 1"       , ""                            , "°C" , "temperature"       , "measurement"     , "", true);
+    if (1 < tma_cnt)
+        mqtt_cfg_sensor(client, 6, "tma"   , "Temperature sensor 2"       , ""                            , "°C" , "temperature"       , "measurement"     , "", true);
+    if (2 < tma_cnt)
+        mqtt_cfg_sensor(client, 7, "tma"   , "Temperature sensor 3"       , ""                            , "°C" , "temperature"       , "measurement"     , "", true);
+    if (3 < tma_cnt)
+        mqtt_cfg_sensor(client, 8, "tma"   , "Temperature sensor 4"       , ""                            , "°C" , "temperature"       , "measurement"     , "", true);
+    if (4 < tma_cnt)
+        mqtt_cfg_sensor(client, 9, "tma"   , "Temperature sensor 5"       , ""                            , "°C" , "temperature"       , "measurement"     , "", true);
+    mqtt_cfg_sensor(client, 0, "lck"   , "Socket lock status"         , "mdi:lock-question"           , ""   , ""                  , ""                , "", false);
 
     // Numbers:             Field| User Friendly Name           | Icon               | Unit | Device Class | Min| Max| Step| Mode    | Value Set Handler
     mqtt_cfg_number(client, "ama", "Maximum charging current"   , ""                 , "A"  , "current"    , 6  , 32 , 1   , "box"   , mqtt_evse_set_max_charging_current);
@@ -520,7 +532,7 @@ static void mqtt_subscribe_send_ha_discovery(esp_mqtt_client_handle_t client) {
     mqtt_cfg_button(client, "restart", "Restart the device", ""  , "restart"   , mqtt_evse_reboot);
 
     for (uint8_t i=0; i < mqtt_value_set_handler_count; i++) {
-        ESP_LOGD(TAG, 
+        ESP_LOGD(TAG,
             "Handler index=%d topic=%s handler=%x",
             i,
             mqtt_value_set_handlers[i].command_topic,
@@ -716,7 +728,7 @@ static void mqtt_publish_evse_sensor_data(esp_mqtt_client_handle_t client, bool 
   }
 
   // Status
-  static evse_state_t prev_status = 0;
+  static evse_state_t prev_status = EVSE_STATE_A;
   evse_state_t status = evse_get_state();
   if (force || (status != prev_status)) {
       sprintf(topic, "%s/status", mqtt_main_topic);
@@ -732,45 +744,39 @@ static void mqtt_publish_evse_sensor_data(esp_mqtt_client_handle_t client, bool 
   static uint8_t prev_tma_cnt = 0;
   static int16_t prev_tma_temps[2] = { 0 };
   bool tma_err = temp_sensor_is_error();
-  int16_t tma_low = temp_sensor_get_low();
-  int16_t tma_high = temp_sensor_get_high();
-  uint8_t tma_cnt = temp_sensor_get_count();
-  int16_t tma_temps[2] = { 0 };
+  int16_t const tma_low = temp_sensor_get_low();
+  int16_t const tma_high = temp_sensor_get_high();
+  uint8_t const tma_cnt = temp_sensor_get_count();
+  int16_t tma_temps[tma_cnt];
+  memset(&tma_temps, 0, sizeof(tma_temps));
   temp_sensor_get_temperatures(tma_temps);
   bool temp_changed = false;
-  for (uint8_t i=0 ; i < ARRAY_SIZE(tma_temps); i++) {
+  for (uint8_t i = 0 ; i < tma_cnt; i++) {
       if (tma_temps[i] != prev_tma_temps[i]) {
           temp_changed = true;
           break;
       }
   }
-  if (force || 
+  if (force ||
       ((tma_err != prev_tma_err) ||
        (tma_low != prev_tma_low) || (tma_high != prev_tma_high) ||
        (tma_cnt != prev_tma_cnt) || temp_changed)) {
       sprintf(topic, "%s/tma", mqtt_main_topic);
       sprintf(payload, "{");
-      sprintf(tmp, "\"temperature_sensor_error\":%d,", temp_sensor_is_error());
+      sprintf(tmp, "\"temperature_sensor_error\":%d,", tma_err);
       strcat(payload, tmp);
-      sprintf(tmp, "\"temperature_sensor_low\":%.1f,", temp_sensor_get_low()/100.0);
+      sprintf(tmp, "\"temperature_sensor_low\":\"%.1f\",", tma_low / 100.0);
       strcat(payload, tmp);
-      sprintf(tmp, "\"temperature_sensor_high\":%.1f,", temp_sensor_get_high()/100.0);
+      sprintf(tmp, "\"temperature_sensor_high\":\"%.1f\",", tma_high / 100.0);
       strcat(payload, tmp);
-      sprintf(tmp, "\"temperature_sensor_count\":%d,", temp_sensor_get_count());
+      sprintf(tmp, "\"temperature_sensor_count\":%d", tma_cnt);
       strcat(payload, tmp);
-      uint8_t i = 0;
-      do
-      {
-        sprintf(tmp, "\"temperature_sensor_%d\":%.1f,", i+1, tma_temps[i]/100.0);
+      for (uint8_t i = 0 ; i < tma_cnt; i++) {
+        sprintf(tmp, ",\"temperature_sensor_%d\":\"%.1f\"", i + 1, tma_temps[i] / 100.0);
         strcat(payload, tmp);
         prev_tma_temps[i] = tma_temps[i];
-        if ((++i) == ARRAY_SIZE(tma_temps)) {
-            strcat(payload, "}");
-        }
-        else {
-            strcat(payload, ",");
-        }
-      } while ( i < ARRAY_SIZE(tma_temps));
+      };
+      strcat(payload, "}");
       esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
       prev_tma_err = tma_err;
       prev_tma_low = tma_low;
@@ -956,6 +962,17 @@ static void mqtt_publish_evse_switch_data(esp_mqtt_client_handle_t client, bool 
       esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
       prev_pol = pol;
   }
+
+  // Button state
+  static bool prev_enb = 0;
+  bool const enb = (button_get_button_state(BUTTON_ID_EVSE_ENABLE)
+                    || button_get_button_state(BUTTON_ID_AUX1));
+  if (force || (enb != prev_enb)) {
+      sprintf(topic, "%s/enb", mqtt_main_topic);
+      sprintf(payload, "%s", enb ? "ON": "OFF");
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      prev_enb = enb;
+  }
 }
 
 static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_t event_id, void* event_data)
@@ -997,7 +1014,7 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
         }
         break;
     case MQTT_EVENT_ERROR:
-        ESP_LOGI(TAG, "MQTT_EVENT_ERROR");
+        ESP_LOGE(TAG, "MQTT_EVENT_ERROR");
         break;
     case MQTT_EVENT_PUBLISHED:
         break;
@@ -1034,18 +1051,22 @@ static void mqtt_task_func(void* param)
         do {
         } while (!xEventGroupWaitBits(wifi_event_group, WIFI_STA_CONNECTED_BIT, pdFALSE, pdFALSE, portMAX_DELAY));
     }
-  
+
     ESP_LOGD(TAG, "Starting MQTT service");
     esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_cfg);
     if (client == NULL) {
         ESP_LOGE(TAG, "client init failed!");
+        return;
     }
     if (esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL) != ESP_OK) {
         ESP_LOGE(TAG, "client register failed!");
+        return;
     }
     if (esp_mqtt_client_start(client) != ESP_OK) {
         ESP_LOGE(TAG, "client start failed!");
+        return;
     }
+    ESP_LOGI(TAG, "MQTT service running");
 
     uint32_t static_data_publish_counter = 0;
     bool force = false;
@@ -1086,7 +1107,7 @@ void mqtt_init(void)
         sprintf(mqtt_main_id, "%s-%s", board_config.mqtt_client_id, &mac[6]);
         sprintf(mqtt_main_topic, "%s_%s", board_config.mqtt_main_topic, &mac[6]);
         sprintf(mqtt_lwt_topic, "%s/%s", mqtt_main_topic, LWT_TOPIC);
-        ESP_LOGD(TAG, "Starting MQTT task");
+        ESP_LOGD(TAG, "Creating MQTT task");
         xTaskCreate(mqtt_task_func, "mqtt_task", 5*1024, NULL, 11, &mqtt_task);
     }
 }
