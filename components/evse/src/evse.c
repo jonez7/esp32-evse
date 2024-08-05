@@ -173,13 +173,13 @@ static void perform_rcm_selftest(void)
     if (rcm && !rcm_selftest) {
         if(board_config.rcm_test) {
             if (!rcm_test()) {
-                ESP_LOGW(TAG, "Residual current monitor self test fail");
+                ESP_LOGE(TAG, "Residual current monitor self test fail");
                 set_error_bits(EVSE_ERR_RCM_SELFTEST_FAULT_BIT);
             } else {
                 ESP_LOGI(TAG, "Residual current monitor self test success");
             }
         } else {
-            ESP_LOGI(TAG, "Residual current monitor self test disabled even RCM present");
+            ESP_LOGW(TAG, "Residual current monitor self test disabled even RCM present");
         }
         rcm_selftest = true;
     }
@@ -518,6 +518,8 @@ void evse_init()
     nvs_get_u16(nvs, NVS_DEFAULT_UNDER_POWER_LIMIT, &under_power_limit);
 
     pilot_set_level(true);
+
+    perform_rcm_selftest();
 }
 
 void evse_reset(void)
