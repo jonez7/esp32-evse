@@ -180,6 +180,7 @@ typedef struct {
 
     bool addressable_led :1;
     gpio_num_t addressable_led_gpio;
+    bool addressable_led_is_grb: 1;
 
     bool thermistor :1;
     adc_channel_t thermistor_adc_channel;

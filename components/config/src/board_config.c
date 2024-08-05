@@ -226,6 +226,7 @@ void board_config_load()
 
                     SET_CONFIG_VALUE("ADDRESSABLE_LED", addressable_led, atob);
                     SET_CONFIG_VALUE("ADDRESSABLE_LED_GPIO", addressable_led_gpio, atoi);
+                    SET_CONFIG_VALUE("ADDRESSABLE_LED_IS_GRB", addressable_led_is_grb, atob);
 
                     SET_CONFIG_VALUE("THERMISTOR", thermistor, atob);
                     SET_CONFIG_VALUE("THERMISTOR_ADC_CHANNEL", thermistor_adc_channel, atoi);
