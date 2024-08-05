@@ -74,6 +74,11 @@ void addressable_led_init(void) {
  */
 void addressable_led_set_rgb(uint8_t red, uint8_t green, uint8_t blue) {
     if (board_config.addressable_led) {
+        if (board_config.addressable_led_is_grb) {
+            uint8_t const tmp = red;
+            red = green;
+            green = tmp;
+        }
         ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, 0, red, green, blue));
         ESP_ERROR_CHECK(led_strip_refresh(led_strip));
     }
