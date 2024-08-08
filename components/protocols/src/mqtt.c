@@ -72,7 +72,7 @@ static void mqtt_subscribe_set_function(
             "%s/%s/set", mqtt_main_topic, topic);
         mqtt_value_set_handlers[mqtt_value_set_handler_count].handler = handler;
         esp_mqtt_client_subscribe_single(
-            client, mqtt_value_set_handlers[mqtt_value_set_handler_count].command_topic, /*qos*/0);
+            client, mqtt_value_set_handlers[mqtt_value_set_handler_count].command_topic, /*qos*/1);
         mqtt_value_set_handler_count++;
     }
     else {
@@ -80,7 +80,7 @@ static void mqtt_subscribe_set_function(
     }
 }
 
-static void mqtt_config_common_part(
+static char* mqtt_config_common_part(
     char* payload,
     char* field,
     char* name,
@@ -93,28 +93,29 @@ static void mqtt_config_common_part(
 
     wifi_get_ip(tmp);
 
-    sprintf(payload,
+    payload += sprintf(payload,
         "{"                                                 // 0
-        "\"~\": \"%s\","                                    // 1
-        "\"object_id\": \"%s_%s\","                         // 2
-        "\"name\": \"%s\","                                 // 3
-        "\"state_topic\": \"~/%s\","                        // 4
-        "\"availability\": ["                               // 5
+        "\"~\":\"%s\","                                     // 1
+        "\"object_id\":\"%s_%s\","                          // 2
+        "\"name\":\"%s\","                                  // 3
+        "\"state_topic\":\"~/%s\","                         // 4
+        "\"availability\":["                                // 5
            "{"                                              // 6
-              "\"topic\": \"~/%s\","                        // 7
-              "\"payload_available\": \"%s\","              // 8
-              "\"payload_not_available\": \"%s\""           // 9
+              "\"topic\":\"~/%s\","                         // 7
+              "\"payload_available\":\"%s\","               // 8
+              "\"payload_not_available\":\"%s\""            // 9
            "}"                                              // 10
           "],"                                              // 11
-        "\"device\": "                                      // 12
+        "\"device\":"                                       // 12
           "{"                                               // 13
-              "\"identifiers\": [\"%s\"],"                  // 14
-              "\"name\": \"%s\","                           // 15
-              "\"model\": \"ESP32 EVSE\","                  // 16
-              "\"manufacturer\": \"OULWare\","              // 17
-              "\"sw_version\": \"%s\","                     // 18
-              "\"configuration_url\": \"http://%s\""        // 19
-          "}",                                              // 20
+              "\"identifiers\":[\"%s\"],"                   // 14
+              "\"name\":\"%s\","                            // 15
+              "\"model\":\"ESP32 EVSE\","                   // 16
+              "\"manufacturer\":\"OULWare\","               // 17
+              "\"sw_version\":\"%s\","                      // 18
+              "\"configuration_url\":\"http://%s\""         // 19
+          "},"                                              // 20
+        "\"qos\":1",
         mqtt_main_topic,          // 1
         mqtt_main_topic, field,   // 2
         name,                     // 3
@@ -128,24 +129,23 @@ static void mqtt_config_common_part(
         tmp);                     // 19
 
     if (unique_nbr) {
-        sprintf(tmp, ",\"unique_id\": \"%s-%s-%d\"", mqtt_main_id, field, unique_nbr);
-        strcat(payload, tmp);
+        payload += sprintf(payload, ",\"unique_id\":\"%s-%s-%d\"",
+                           mqtt_main_id, field, unique_nbr);
 
     }
     else {
-        sprintf(tmp ,",\"unique_id\": \"%s-%s\"", mqtt_main_id, field );
-        strcat(payload, tmp);
+        payload += sprintf(payload, ",\"unique_id\":\"%s-%s\"", mqtt_main_id, field);
     }
 
     if (strlen(icon)) {
-        sprintf(tmp, ",\"icon\": \"%s\"", icon);
-        strcat(payload, tmp);
+        payload += sprintf(payload, ",\"icon\":\"%s\"", icon);
     }
 
     if (strlen(entity_category)) {
-        sprintf(tmp, ",\"entity_category\": \"%s\"", entity_category);
-        strcat(payload, tmp);
+        payload += sprintf(payload, ",\"entity_category\":\"%s\"", entity_category);
     }
+
+    return payload;
 }
 
 static void mqtt_cfg_sensor(
@@ -164,7 +164,7 @@ static void mqtt_cfg_sensor(
 
         char discovery_topic[100];
         char payload[1000];
-        char tmp[100];
+        char * p_out;
 
         /* See https://www.home-assistant.io/docs/mqtt/discovery/ and
          *     https://www.home-assistant.io/integrations/sensor.mqtt/ */
@@ -175,35 +175,30 @@ static void mqtt_cfg_sensor(
             sprintf(discovery_topic, "homeassistant/sensor/%s/%s/config", mqtt_main_topic, field);
         }
 
-        mqtt_config_common_part(payload, field, name, icon, entity_category, group);
+        p_out = mqtt_config_common_part(payload, field, name, icon, entity_category, group);
 
         if (strlen(unit)) {
-            sprintf(tmp, ",\"unit_of_meas\": \"%s\"", unit);
-            strcat(payload, tmp);
+            p_out += sprintf(p_out, ",\"unit_of_meas\":\"%s\"", unit);
         }
 
         if (strlen(device_class)) {
-            sprintf(tmp, ",\"device_class\": \"%s\"", device_class);
-            strcat(payload, tmp);
+            p_out += sprintf(p_out, ",\"device_class\":\"%s\"", device_class);
         }
 
         if (strlen(state_class)) {
-            sprintf(tmp, ",\"state_class\": \"%s\"", state_class);
-            strcat(payload, tmp);
+            p_out += sprintf(p_out, ",\"state_class\":\"%s\"", state_class);
         }
 
         if (group) {
             char name_mod[32];
-            strcpy(tmp, name);
-            strcpy(name_mod, strlwr(tmp));
+            strcpy(name_mod, name);
+            strlwr(name_mod);
             replacechar(name_mod, ' ', '_');
-            sprintf(tmp, ",\"value_template\": \"{{ value_json.%s%s }}\"",
-                    name_mod, (isfloat ? " | float" : ""));
-            strcat(payload, tmp);
+            p_out += sprintf(p_out, ",\"value_template\": \"{{ value_json.%s%s }}\"",
+                             name_mod, (isfloat ? " | float" : ""));
         }
 
         strcat(payload, "}");
-
         esp_mqtt_client_publish(client, discovery_topic, payload, 0, /*qos*/1, /*retain*/1);
     }
 }
@@ -224,47 +219,74 @@ static void mqtt_cfg_number(
     if (board_config.mqtt_homeassistant_discovery) {
         char discovery_topic[100];
         char payload[1000];
-        char tmp[100];
+        char * p_out;
 
         /* See https://www.home-assistant.io/docs/mqtt/discovery/ and
          *     https://www.home-assistant.io/integrations/number.mqtt/ */
         sprintf(discovery_topic, "homeassistant/number/%s/%s/config", mqtt_main_topic, field);
 
-        mqtt_config_common_part(payload, field, name, icon, "config", 0);
-
-        sprintf(tmp, ",\"command_topic\": \"~/%s/set\"", field);
-        strcat(payload, tmp);
-
-        sprintf(tmp, ",\"min\": \"%f\"", min);
-        strcat(payload, tmp);
-
-        sprintf(tmp, ",\"max\": \"%f\"", max);
-        strcat(payload, tmp);
-
-        sprintf(tmp, ",\"step\": \"%f\"", step);
-        strcat(payload, tmp);
+        p_out = mqtt_config_common_part(payload, field, name, icon, "config", 0);
+        p_out += sprintf(p_out, ",\"command_topic\":\"~/%s/set\"", field);
+        p_out += sprintf(p_out, ",\"min\":\"%f\"", min);
+        p_out += sprintf(p_out, ",\"max\":\"%f\"", max);
+        p_out += sprintf(p_out, ",\"step\":\"%f\"", step);
 
         if (strlen(mode)) {
-            sprintf(tmp, ",\"mode\": \"%s\"", mode);
-            strcat(payload, tmp);
+            p_out += sprintf(p_out, ",\"mode\":\"%s\"", mode);
         }
 
         if (strlen(unit)) {
-            sprintf(tmp, ",\"unit_of_meas\": \"%s\"", unit);
-            strcat(payload, tmp);
+            p_out += sprintf(p_out, ",\"unit_of_meas\":\"%s\"", unit);
         }
 
         if (strlen(device_class)) {
-            sprintf(tmp, ",\"device_class\": \"%s\"", device_class);
-            strcat(payload, tmp);
+            p_out += sprintf(p_out, ",\"device_class\":\"%s\"", device_class);
         }
 
         strcat(payload, "}");
-
         esp_mqtt_client_publish(client, discovery_topic, payload, 0, /*qos*/1, /*retain*/1);
     }
 
-    mqtt_subscribe_set_function(client, field, handler);
+    if (handler) {
+        mqtt_subscribe_set_function(client, field, handler);
+    }
+}
+
+static void mqtt_cfg_select_range(
+    esp_mqtt_client_handle_t client,
+    char* field,
+    char* name,
+    char* icon,
+    uint8_t min,
+    uint8_t max,
+    uint8_t step,
+    mqtt_value_set_handler handler)
+{
+    if (board_config.mqtt_homeassistant_discovery) {
+        char discovery_topic[100];
+        char payload[1000];
+        char * p_out;
+
+        /* See https://www.home-assistant.io/docs/mqtt/discovery/ and
+         *     https://www.home-assistant.io/integrations/select.mqtt/ */
+        sprintf(discovery_topic, "homeassistant/select/%s/%s/config", mqtt_main_topic, field);
+
+        p_out = mqtt_config_common_part(payload, field, name, icon, "config", 0);
+        p_out += sprintf(p_out, ",\"command_topic\":\"~/%s/set\"", field);
+        p_out += sprintf(p_out, ",\"options\":[");
+
+        while (min <= max) {
+            p_out += sprintf(p_out, "\"%uA\",", min);
+            min += step;
+        }
+        // note: replaces last comma after the loop
+        sprintf((p_out - 1), "]}");
+        esp_mqtt_client_publish(client, discovery_topic, payload, 0, /*qos*/1, /*retain*/1);
+    }
+
+    if (handler) {
+        mqtt_subscribe_set_function(client, field, handler);
+    }
 }
 
 static void mqtt_cfg_select(
@@ -278,26 +300,23 @@ static void mqtt_cfg_select(
     if (board_config.mqtt_homeassistant_discovery) {
         char discovery_topic[100];
         char payload[1000];
-        char tmp[512];
+        char * p_out;
 
         /* See https://www.home-assistant.io/docs/mqtt/discovery/ and
          *     hhttps://www.home-assistant.io/integrations/select.mqtt/ */
         sprintf(discovery_topic, "homeassistant/select/%s/%s/config", mqtt_main_topic, field);
 
-        mqtt_config_common_part(payload, field, name, icon, "config", 0);
-
-        sprintf(tmp, ",\"command_topic\": \"~/%s/set\"", field);
-        strcat(payload, tmp);
-
-        sprintf(tmp, ",\"options\": [ %s ]", options);
-        strcat(payload, tmp);
+        p_out = mqtt_config_common_part(payload, field, name, icon, "config", 0);
+        p_out += sprintf(p_out, ",\"command_topic\":\"~/%s/set\"", field);
+        p_out += sprintf(p_out, ",\"options\":[%s]", options);
 
         strcat(payload, "}");
-
         esp_mqtt_client_publish(client, discovery_topic, payload, 0, /*qos*/1, /*retain*/1);
     }
 
-    mqtt_subscribe_set_function(client, field, handler);
+    if (handler) {
+        mqtt_subscribe_set_function(client, field, handler);
+    }
 }
 
 static void mqtt_cfg_switch(
@@ -311,28 +330,26 @@ static void mqtt_cfg_switch(
     if (board_config.mqtt_homeassistant_discovery) {
         char discovery_topic[100];
         char payload[1000];
-        char tmp[100];
+        char * p_out;
 
         /* See https://www.home-assistant.io/docs/mqtt/discovery/ and
          *     https://www.home-assistant.io/integrations/switch.mqtt/ */
         sprintf(discovery_topic, "homeassistant/switch/%s/%s/config", mqtt_main_topic, field);
 
-        mqtt_config_common_part(payload, field, name, icon, "config", 0);
-
-        sprintf(tmp, ",\"command_topic\": \"~/%s/set\"", field);
-        strcat(payload, tmp);
+        p_out = mqtt_config_common_part(payload, field, name, icon, "config", 0);
+        p_out += sprintf(p_out, ",\"command_topic\":\"~/%s/set\"", field);
 
         if (strlen(device_class)) {
-            sprintf(tmp, ",\"device_class\": \"%s\"", device_class);
-            strcat(payload, tmp);
+            p_out += sprintf(p_out, ",\"device_class\": \"%s\"", device_class);
         }
 
         strcat(payload, "}");
-
         esp_mqtt_client_publish(client, discovery_topic, payload, 0, /*qos*/1, /*retain*/1);
     }
 
-    mqtt_subscribe_set_function(client, field, handler);
+    if (handler) {
+        mqtt_subscribe_set_function(client, field, handler);
+    }
 }
 
 static void mqtt_cfg_button(
@@ -346,28 +363,26 @@ static void mqtt_cfg_button(
     if (board_config.mqtt_homeassistant_discovery) {
         char discovery_topic[100];
         char payload[1000];
-        char tmp[100];
+        char * p_out;
 
         /* See https://www.home-assistant.io/docs/mqtt/discovery/ and
          *     https://www.home-assistant.io/integrations/button.mqtt/ */
         sprintf(discovery_topic, "homeassistant/button/%s/%s/config", mqtt_main_topic, field);
 
-        mqtt_config_common_part(payload, field, name, icon, "config", 0);
-
-        sprintf(tmp, ",\"command_topic\": \"~/%s/set\"", field);
-        strcat(payload, tmp);
+        p_out = mqtt_config_common_part(payload, field, name, icon, "config", 0);
+        p_out += sprintf(p_out, ",\"command_topic\":\"~/%s/set\"", field);
 
         if (strlen(device_class)) {
-            sprintf(tmp, ",\"device_class\": \"%s\"", device_class);
-            strcat(payload, tmp);
+            p_out += sprintf(p_out, ",\"device_class\": \"%s\"", device_class);
         }
 
         strcat(payload, "}");
-
         esp_mqtt_client_publish(client, discovery_topic, payload, 0, /*qos*/1, /*retain*/1);
     }
 
-    mqtt_subscribe_set_function(client, field, handler);
+    if (handler) {
+        mqtt_subscribe_set_function(client, field, handler);
+    }
 }
 
 // Maximum charging current / ama
@@ -377,7 +392,7 @@ static void mqtt_evse_set_max_charging_current(char* data) {
 
 // Charging current / amp
 static void mqtt_evse_set_charging_current(char* data) {
-    evse_set_charging_current((uint16_t)(atoi(data)*10));
+    evse_set_charging_current((uint16_t)(atoi(data) * 10));
 }
 
 // Temperature threshold / amt
@@ -507,8 +522,6 @@ static void mqtt_subscribe_send_ha_discovery(esp_mqtt_client_handle_t client) {
     mqtt_cfg_sensor(client, 0, "lck"   , "Socket lock status"         , "mdi:lock-question"           , ""   , ""                  , ""                , "", false);
 
     // Numbers:             Field| User Friendly Name           | Icon               | Unit | Device Class | Min| Max| Step| Mode    | Value Set Handler
-    mqtt_cfg_number(client, "ama", "Maximum charging current"   , ""                 , "A"  , "current"    , 6  , 32 , 1   , "box"   , mqtt_evse_set_max_charging_current);
-    mqtt_cfg_number(client, "amp", "Charging current"           , ""                 , "A"  , "current"    , 6  , 32 , 0.1 , "slider", mqtt_evse_set_charging_current);
     mqtt_cfg_number(client, "amt", "Temperature threshold"      , ""                 , "°C ", "temperature", 40 , 80 , 1   , "box"   , mqtt_evse_set_temp_threshold);
     mqtt_cfg_number(client, "ate", "Consumption limit"          , ""                 , "kWh", "energy"     , 0  , 50 , 1   , "slider", mqtt_evse_set_consumption_limit);
     mqtt_cfg_number(client, "att", "Charging time limit"        , "mdi:timer-outline", "min", ""           , 0  , 300, 5   , "slider", mqtt_evse_set_charging_time_limit);
@@ -518,8 +531,12 @@ static void mqtt_subscribe_send_ha_discovery(esp_mqtt_client_handle_t client) {
     mqtt_cfg_number(client, "dupl","Default under power limit"  , ""                 , "kWh", "energy"     , 0  , 10 , 0.01, "slider", mqtt_evse_set_default_under_power_limit);
     mqtt_cfg_number(client, "acv", "AC Voltage"                 , ""                 , "V"  , "voltage"    , 100, 300, 1   , "box"   , mqtt_evse_set_ac_voltage);
 
+    // Selects range:             Field| User Friendly Name           | Icon               | Min| Max| Step| Value Set Handler
+    mqtt_cfg_select_range(client, "ama", "Maximum charging current"   , "mdi:current-ac"   , 6  , 32 , 1   , mqtt_evse_set_max_charging_current);
+    mqtt_cfg_select_range(client, "amp", "Charging current"           , "mdi:current-ac"   , 6  , 32 , 1   , mqtt_evse_set_charging_current);
+
     // Select:              Field | User Friendly Name | Icon                | Options
-    mqtt_cfg_select(client, "emm" , "Energy meter mode", "mdi:meter-electric", "\"Dummy single phase\",\"Dummy three phase\",\"Current sensing\",\"Current and voltage sensing\"", mqtt_evse_set_energy_meter_mode);
+    mqtt_cfg_select(client, "emm" , "Energy meter mode", "mdi:meter-electric", "\"Dummy\",\"Current sensing\",\"Current and voltage sensing\"", mqtt_evse_set_energy_meter_mode);
 
     // Switch:              Field| User Friendly Name           | Icon                 | Device Class| Value Set Handler
     mqtt_cfg_switch(client, "scs", "Set charger state"          , "mdi:auto-fix"       , "switch"    , mqtt_evse_set_charger_state);
@@ -567,7 +584,7 @@ static void mqtt_publish_system_data(esp_mqtt_client_handle_t client, bool force
   // Uptime
   sprintf(topic, "%s/rbt", mqtt_main_topic);
   sprintf(payload, "%lld", esp_timer_get_time() / 1000000);
-  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+  esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
 
   // Free Mem
   static size_t prev_fme = 0;
@@ -577,7 +594,7 @@ static void mqtt_publish_system_data(esp_mqtt_client_handle_t client, bool force
   if (force || (fme != prev_fme)) {
       sprintf(topic, "%s/fme", mqtt_main_topic);
       sprintf(payload, "%d", fme);
-      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
       prev_fme = fme;
   }
 
@@ -587,7 +604,7 @@ static void mqtt_publish_system_data(esp_mqtt_client_handle_t client, bool force
   if (force || (rssi != prev_rssi)) {
       sprintf(topic, "%s/rssi", mqtt_main_topic);
       sprintf(payload, "%d", rssi);
-      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
       prev_rssi = rssi;
   }
 
@@ -598,7 +615,7 @@ static void mqtt_publish_system_data(esp_mqtt_client_handle_t client, bool force
   if (force || (tmc != prev_tmc)) {
       sprintf(topic, "%s/tmc", mqtt_main_topic);
       sprintf(payload, "%.1f", tmc);
-      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
       prev_tmc = tmc;
   }
 }
@@ -615,7 +632,7 @@ static void mqtt_publish_evse_sensor_data(esp_mqtt_client_handle_t client, bool 
   if (force || (cbl != prev_cbl)) {
       sprintf(topic, "%s/cbl", mqtt_main_topic);
       sprintf(payload, "%d", cbl);
-      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
       prev_cbl = cbl;
   }
 
@@ -625,7 +642,7 @@ static void mqtt_publish_evse_sensor_data(esp_mqtt_client_handle_t client, bool 
   if (force || (ccs != prev_ccs)) {
       sprintf(topic, "%s/ccs", mqtt_main_topic);
       sprintf(payload, "%s", (ccs? "Charging enabled":"Charging Disabled") );
-      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
       prev_ccs = ccs;
   }
 
@@ -635,7 +652,7 @@ static void mqtt_publish_evse_sensor_data(esp_mqtt_client_handle_t client, bool 
   if (force || (cdi != prev_cdi)) {
       sprintf(topic, "%s/cdi", mqtt_main_topic);
       sprintf(payload, "%ld", cdi);
-      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
       prev_cdi = cdi;
   }
 
@@ -655,7 +672,7 @@ static void mqtt_publish_evse_sensor_data(esp_mqtt_client_handle_t client, bool 
   if (force || (eto != prev_eto)) {
       sprintf(topic, "%s/eto", mqtt_main_topic);
       sprintf(payload, "%ld", eto);
-      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
       prev_eto = eto;
   }
 
@@ -665,7 +682,7 @@ static void mqtt_publish_evse_sensor_data(esp_mqtt_client_handle_t client, bool 
   if (force || (lst != prev_lst)) {
       sprintf(topic, "%s/lst", mqtt_main_topic);
       sprintf(payload, "%ld", lst);
-      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
       prev_lst = lst;
   }
 
@@ -707,7 +724,7 @@ static void mqtt_publish_evse_sensor_data(esp_mqtt_client_handle_t client, bool 
       // Current power
       sprintf(tmp, "\"current_power\":%d}", pwr);
       strcat(payload, tmp);
-      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
       prev_l1v = l1v;
       prev_l2v = l2v;
       prev_l3v = l3v;
@@ -723,7 +740,7 @@ static void mqtt_publish_evse_sensor_data(esp_mqtt_client_handle_t client, bool 
   if (force || (rcd != prev_rcd)) {
       sprintf(topic, "%s/rcd", mqtt_main_topic);
       sprintf(payload, "%s", (rcd?"Detected":"Not detected"));
-      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
       prev_rcd = rcd;
   }
 
@@ -777,7 +794,7 @@ static void mqtt_publish_evse_sensor_data(esp_mqtt_client_handle_t client, bool 
         prev_tma_temps[i] = tma_temps[i];
       };
       strcat(payload, "}");
-      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
       prev_tma_err = tma_err;
       prev_tma_low = tma_low;
       prev_tma_high = tma_high;
@@ -790,7 +807,7 @@ static void mqtt_publish_evse_sensor_data(esp_mqtt_client_handle_t client, bool 
   if (force || (lck != prev_lck)) {
       sprintf(topic, "%s/lck", mqtt_main_topic);
       sprintf(payload, "%s", socket_lock_status_to_str(lck));
-      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
       prev_lck = lck;
   }
 
@@ -806,18 +823,18 @@ static void mqtt_publish_evse_number_data(esp_mqtt_client_handle_t client, bool 
   uint8_t ama = evse_get_max_charging_current();
   if (force || (ama != prev_ama)) {
       sprintf(topic, "%s/ama", mqtt_main_topic);
-      sprintf(payload, "%d", ama);
-      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      sprintf(payload, "%uA", ama);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
       prev_ama = ama;
   }
 
   // Requested current
   static uint16_t prev_amp = 0;
-  uint16_t amp = evse_get_charging_current();
+  uint16_t amp = evse_get_charging_current() / 10;
   if (force || (amp != prev_amp)) {
       sprintf(topic, "%s/amp", mqtt_main_topic);
-      sprintf(payload, "%f", amp/10.0);
-      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      sprintf(payload, "%uA", amp);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
       prev_amp = amp;
   }
 
@@ -827,7 +844,7 @@ static void mqtt_publish_evse_number_data(esp_mqtt_client_handle_t client, bool 
   if (force || (amt != prev_amt)) {
       sprintf(topic, "%s/amt", mqtt_main_topic);
       sprintf(payload, "%d", amt);
-      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
       prev_amt = amt;
   }
 
@@ -837,7 +854,7 @@ static void mqtt_publish_evse_number_data(esp_mqtt_client_handle_t client, bool 
   if (force || (ate != prev_ate)) {
       sprintf(topic, "%s/ate", mqtt_main_topic);
       sprintf(payload, "%f", ate/1000.0);
-      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
       prev_ate = ate;
   }
 
@@ -847,7 +864,7 @@ static void mqtt_publish_evse_number_data(esp_mqtt_client_handle_t client, bool 
   if (force || (att != prev_att)) {
       sprintf(topic, "%s/att", mqtt_main_topic);
       sprintf(payload, "%f", att/60.0);
-      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
       prev_att = att;
   }
 
@@ -857,7 +874,7 @@ static void mqtt_publish_evse_number_data(esp_mqtt_client_handle_t client, bool 
   if (force || (upl != prev_upl)) {
       sprintf(topic, "%s/upl", mqtt_main_topic);
       sprintf(payload, "%f", upl/1000.0);
-      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
       prev_upl = upl;
   }
 
@@ -867,7 +884,7 @@ static void mqtt_publish_evse_number_data(esp_mqtt_client_handle_t client, bool 
   if (force || (date != prev_date)) {
       sprintf(topic, "%s/date", mqtt_main_topic);
       sprintf(payload, "%f", date/1000.0);
-      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
       prev_date = date;
   }
 
@@ -877,7 +894,7 @@ static void mqtt_publish_evse_number_data(esp_mqtt_client_handle_t client, bool 
   if (force || (datt != prev_datt)) {
       sprintf(topic, "%s/datt", mqtt_main_topic);
       sprintf(payload, "%f", datt/60.0);
-      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
       prev_datt = datt;
   }
 
@@ -887,7 +904,7 @@ static void mqtt_publish_evse_number_data(esp_mqtt_client_handle_t client, bool 
   if (force || (dupl != prev_dupl)) {
       sprintf(topic, "%s/dupl", mqtt_main_topic);
       sprintf(payload, "%f", dupl/1000.0);
-      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
       prev_dupl = dupl;
   }
 
@@ -897,7 +914,7 @@ static void mqtt_publish_evse_number_data(esp_mqtt_client_handle_t client, bool 
   if (force || (acv != prev_acv)) {
       sprintf(topic, "%s/acv", mqtt_main_topic);
       sprintf(payload, "%d", acv);
-      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
       prev_acv = acv;
   }
 }
@@ -913,7 +930,7 @@ static void mqtt_publish_evse_select_data(esp_mqtt_client_handle_t client, bool 
   if (force || (emm != prev_emm)) {
       sprintf(topic, "%s/emm", mqtt_main_topic);
       sprintf(payload, "%s", energy_meter_mode_to_str_mqtt(emm));
-      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
       prev_emm = emm;
   }
 }
@@ -929,7 +946,7 @@ static void mqtt_publish_evse_switch_data(esp_mqtt_client_handle_t client, bool 
   if (force || (scs != prev_scs)) {
       sprintf(topic, "%s/scs", mqtt_main_topic);
       sprintf(payload, "%s", evse_is_enabled()? "ON": "OFF");
-      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/0);
       prev_scs = scs;
   }
 
@@ -939,7 +956,7 @@ static void mqtt_publish_evse_switch_data(esp_mqtt_client_handle_t client, bool 
   if (force || (acs != prev_acs)) {
       sprintf(topic, "%s/acs", mqtt_main_topic);
       sprintf(payload, "%s", acs? "ON": "OFF");
-      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
       prev_acs = acs;
   }
 
@@ -949,7 +966,7 @@ static void mqtt_publish_evse_switch_data(esp_mqtt_client_handle_t client, bool 
   if (force || (sol != prev_sol)) {
       sprintf(topic, "%s/sol", mqtt_main_topic);
       sprintf(payload, "%s", sol? "ON": "OFF");
-      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
       prev_sol = sol;
   }
 
@@ -959,7 +976,7 @@ static void mqtt_publish_evse_switch_data(esp_mqtt_client_handle_t client, bool 
   if (force || (pol != prev_pol)) {
       sprintf(topic, "%s/pol", mqtt_main_topic);
       sprintf(payload, "%s", pol? "ON": "OFF");
-      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
       prev_pol = pol;
   }
 
@@ -970,7 +987,7 @@ static void mqtt_publish_evse_switch_data(esp_mqtt_client_handle_t client, bool 
   if (force || (enb != prev_enb)) {
       sprintf(topic, "%s/enb", mqtt_main_topic);
       sprintf(payload, "%s", enb ? "ON": "OFF");
-      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/1, /*retain*/1);
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
       prev_enb = enb;
   }
 }

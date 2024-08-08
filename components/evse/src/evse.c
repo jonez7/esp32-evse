@@ -682,7 +682,7 @@ uint16_t evse_get_charging_current(void)
 
 esp_err_t evse_set_charging_current(uint16_t value)
 {
-    ESP_LOGI(TAG, "Set charging current %dA*10", value);
+    ESP_LOGI(TAG, "Set charging current %dA/10", value);
 
     if (value < CHARGING_CURRENT_MIN || value > max_charging_current * 10) {
         ESP_LOGE(TAG, "Charging current out of range");
