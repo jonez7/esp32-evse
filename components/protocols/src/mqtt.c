@@ -1046,6 +1046,10 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
     case MQTT_EVENT_PUBLISHED:
         break;
     case MQTT_EVENT_SUBSCRIBED:
+        ESP_LOGD(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
+        break;
+    case MQTT_EVENT_UNSUBSCRIBED:
+        ESP_LOGD(TAG, "MQTT_EVENT_UNSUBSCRIBED, msg_id=%d", event->msg_id);
         break;
     default:
         ESP_LOGD(TAG, "Other event id:%d", event->event_id);
