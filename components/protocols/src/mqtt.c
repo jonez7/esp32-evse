@@ -41,13 +41,15 @@ static const char* TAG = "mqtt";
 
 static TaskHandle_t mqtt_task;
 
+static bool mqtt_connected;
+
 static char mqtt_main_topic[32];
 
 static char mqtt_main_id[32];
 
 static char mqtt_lwt_topic[64];
 
-static uint8_t mqtt_value_set_handler_count = 0;
+static uint8_t mqtt_value_set_handler_count;
 
 static struct mqtt_value_set_handlers_funcs mqtt_value_set_handlers[18];
 
@@ -69,13 +71,17 @@ static void mqtt_subscribe_set_function(
 {
     if (mqtt_value_set_handler_count < ARRAY_SIZE(mqtt_value_set_handlers)) {
         sprintf(mqtt_value_set_handlers[mqtt_value_set_handler_count].command_topic,
-            "%s/%s/set", mqtt_main_topic, topic);
+                "%s/%s/set", mqtt_main_topic, topic);
         mqtt_value_set_handlers[mqtt_value_set_handler_count].handler = handler;
-        esp_mqtt_client_subscribe_single(
-            client, mqtt_value_set_handlers[mqtt_value_set_handler_count].command_topic, /*qos*/1);
+        int msg_id = esp_mqtt_client_subscribe_single(
+                client, mqtt_value_set_handlers[mqtt_value_set_handler_count].command_topic, /*qos*/1);
+        if (msg_id < 0) {
+            ESP_LOGE(TAG, "Unable to subscribe topic %s. error %d", topic, msg_id);
+        } else {
+            ESP_LOGD(TAG, "Subscribed to topic %s. msg_id %d", topic, msg_id);
+        }
         mqtt_value_set_handler_count++;
-    }
-    else {
+    } else {
         ESP_LOGE(TAG, "Handler table overflow! Cannot set handler for topic %s", topic);
     }
 }
@@ -477,7 +483,10 @@ static void mqtt_evse_reboot(char* data) {
     esp_restart();
 }
 
-static void mqtt_subscribe_send_ha_discovery(esp_mqtt_client_handle_t client) {
+static void mqtt_subscribe_send_ha_discovery(esp_mqtt_client_handle_t client)
+{
+    // Clear subscribe handler buffer
+    mqtt_value_set_handler_count = 0;
 
     uint8_t const tma_cnt = temp_sensor_get_count();
 
@@ -1007,9 +1016,11 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
         mqtt_publish_evse_number_data(client, true);
         mqtt_publish_evse_select_data(client, true);
         mqtt_publish_evse_switch_data(client, true);
+        mqtt_connected = true;
         break;
     case MQTT_EVENT_DISCONNECTED:
         ESP_LOGI(TAG, "MQTT Disconnected");
+        mqtt_connected = false;
         break;
     case MQTT_EVENT_DATA:
         char topic[32];
@@ -1021,8 +1032,7 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
         ESP_LOGD(TAG, "MQTT Data event=%d topic=%s msg_id=%d DATA=%s", event->event_id, topic, event->msg_id, data);
         for (uint8_t i=0; i < mqtt_value_set_handler_count; i++) {
             if (strcmp(topic, mqtt_value_set_handlers[i].command_topic) == 0) {
-
-            if (mqtt_value_set_handlers[i].handler) {
+                if (mqtt_value_set_handlers[i].handler) {
                     mqtt_value_set_handlers[i].handler(data);
                     mqtt_publish_evse_switch_data(client, true);
                 }
@@ -1036,6 +1046,10 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
     case MQTT_EVENT_PUBLISHED:
         break;
     case MQTT_EVENT_SUBSCRIBED:
+        ESP_LOGD(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
+        break;
+    case MQTT_EVENT_UNSUBSCRIBED:
+        ESP_LOGD(TAG, "MQTT_EVENT_UNSUBSCRIBED, msg_id=%d", event->msg_id);
         break;
     default:
         ESP_LOGD(TAG, "Other event id:%d", event->event_id);
@@ -1045,6 +1059,8 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
 
 static void mqtt_task_func(void* param)
 {
+    mqtt_connected = false;
+
     esp_mqtt_client_config_t mqtt_cfg = {
         .broker.address.uri = board_config.mqtt_uri,
         .credentials.client_id = mqtt_main_id,
@@ -1090,6 +1106,12 @@ static void mqtt_task_func(void* param)
     while (true) {
         vTaskDelay(pdMS_TO_TICKS(1000));
 
+        if (!mqtt_connected) {
+            // Wait until MQTT is connected correctly
+            static_data_publish_counter = 0;
+            continue;
+        }
+
         static_data_publish_counter++;
 
         int64_t start = esp_timer_get_time();
@@ -1102,7 +1124,7 @@ static void mqtt_task_func(void* param)
             mqtt_publish_evse_number_data(client, force);
             mqtt_publish_evse_select_data(client, force);
             mqtt_publish_evse_switch_data(client, force);
-            ESP_LOGD(TAG, "update time=%lld", (esp_timer_get_time()-start));
+            ESP_LOGD(TAG, "update time=%lld", (esp_timer_get_time() - start));
             force = false;
         }
     }
