@@ -12,6 +12,7 @@ typedef enum
     BUTTON_ID_WIFI,
     BUTTON_ID_EVSE_ENABLE,
     BUTTON_ID_AUX1,
+    BUTTON_ID_AUX2,
     BUTTON_ID_MAX
 } button_id_t;
 

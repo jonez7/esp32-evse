@@ -36,6 +36,8 @@ typedef struct
     gpio_num_t button_evse_enable_gpio;
     bool button_aux1 : 1;
     gpio_num_t button_aux1_gpio;
+    bool button_aux2 : 1;
+    gpio_num_t button_aux2_gpio;
 
     gpio_num_t pilot_pwm_gpio;
     adc_channel_t pilot_adc_channel;
@@ -56,6 +58,10 @@ typedef struct
     gpio_num_t aux_relay_gpio;
 
     bool power_outlet : 1;
+
+    bool tesla_button : 1;
+    gpio_num_t tesla_button_transmitter_gpio;
+    uint8_t tesla_button_button_id;
 
     bool socket_lock : 1;
     gpio_num_t socket_lock_a_gpio;

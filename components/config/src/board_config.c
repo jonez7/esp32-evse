@@ -97,6 +97,8 @@ void board_config_load()
                     SET_CONFIG_VALUE("BUTTON_EVSE_ENABLE_GPIO", button_evse_enable_gpio, atoi);
                     SET_CONFIG_VALUE("BUTTON_AUX1", button_aux1, atob);
                     SET_CONFIG_VALUE("BUTTON_AUX1_GPIO", button_aux1_gpio, atoi);
+                    SET_CONFIG_VALUE("BUTTON_AUX2", button_aux2, atob);
+                    SET_CONFIG_VALUE("BUTTON_AUX2_GPIO", button_aux2_gpio, atoi);
                     SET_CONFIG_VALUE("PILOT_PWM_GPIO", pilot_pwm_gpio, atoi);
                     SET_CONFIG_VALUE("PILOT_ADC_CHANNEL", pilot_adc_channel, atoi);
                     SET_CONFIG_VALUE("PILOT_DOWN_THRESHOLD_12", pilot_down_threshold_12, atoi);
@@ -113,6 +115,9 @@ void board_config_load()
                     SET_CONFIG_VALUE("AUX_RELAY", aux_relay, atob);
                     SET_CONFIG_VALUE("AUX_RELAY_GPIO", aux_relay_gpio, atoi);
                     SET_CONFIG_VALUE("POWER_OUTLET", power_outlet, atob);
+                    SET_CONFIG_VALUE("TESLA_BUTTON", tesla_button, atob);
+                    SET_CONFIG_VALUE("TESLA_BUTTON_TRANSMITTER_GPIO", tesla_button_transmitter_gpio, atoi);
+                    SET_CONFIG_VALUE("TESLA_BUTTON_BUTTON_ID", tesla_button_button_id, atoi);
                     SET_CONFIG_VALUE("SOCKET_LOCK", socket_lock, atob);
                     SET_CONFIG_VALUE("SOCKET_LOCK_A_GPIO", socket_lock_a_gpio, atoi);
                     SET_CONFIG_VALUE("SOCKET_LOCK_B_GPIO", socket_lock_b_gpio, atoi);
