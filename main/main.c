@@ -27,6 +27,7 @@
 #include "mqtt.h"
 #include "addressable_led.h"
 #include "power_outlet.h"
+#include "tesla_button.h"
 
 #define AP_CONNECTION_TIMEOUT 60000 // 60sec
 #define RESET_HOLD_TIME       5000  // 5sec
@@ -267,6 +268,7 @@ void app_main(void)
     script_init();
     addressable_led_init();
     power_outlet_init();
+    tesla_button_init();
 
     set_button_callbacks();
 

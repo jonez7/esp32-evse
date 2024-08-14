@@ -122,6 +122,11 @@ void button_init(void)
         io_conf.pin_bit_mask |= BIT64(board_config.button_aux1_gpio);
     }
 
+    if (board_config.button_aux2) {
+        buttons[BUTTON_ID_AUX2].gpio = board_config.button_aux2_gpio;
+        io_conf.pin_bit_mask |= BIT64(board_config.button_aux2_gpio);
+    }
+
     ESP_ERROR_CHECK(gpio_config(&io_conf));
 
     for (int i = 0; i < BUTTON_ID_MAX; i++) {

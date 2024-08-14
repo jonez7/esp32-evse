@@ -1,5 +1,6 @@
 set(srcs
-    "src/power_outlet.c")
+    "src/power_outlet.c"
+    "src/tesla_button.c")
 
 idf_component_register(SRCS "${srcs}"
                     INCLUDE_DIRS "include"
