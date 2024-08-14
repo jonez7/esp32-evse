@@ -465,7 +465,7 @@ static void mqtt_aux_set_power_outlet(char* data) {
     power_outlet_set_state(strcmp(data, "ON")==0 ? true : false);
 }
 
-// Aux power outlet / enb
+// Disable/enable buttos / enb
 static void mqtt_enable_disable_buttons(char* data) {
     bool enabled = strcmp(data, "ON")==0 ? true : false;
 
@@ -979,7 +979,7 @@ static void mqtt_publish_evse_switch_data(esp_mqtt_client_handle_t client, bool 
       prev_sol = sol;
   }
 
-  // Socket outlet
+  // Power outlet
   static bool prev_pol = 0;
   bool pol = power_outlet_get_state();
   if (force || (pol != prev_pol)) {
@@ -996,6 +996,20 @@ static void mqtt_publish_evse_switch_data(esp_mqtt_client_handle_t client, bool 
   if (force || (enb != prev_enb)) {
       sprintf(topic, "%s/enb", mqtt_main_topic);
       sprintf(payload, "%s", enb ? "ON": "OFF");
+      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
+
+  // Disable/enable buttos / enb
+  static bool prev_enb = 0;
+  bool enb = false;
+  if (board_config.button_evse_enable) {
+      enb = button_get_button_state(BUTTON_ID_EVSE_ENABLE);
+  }
+  if (board_config.button_aux1) {
+      enb |= button_get_button_state(BUTTON_ID_AUX1);
+  }
+  if (force || (enb != prev_enb)) {
+      sprintf(topic, "%s/enb", mqtt_main_topic);
+      sprintf(payload, "%s", enb? "ON": "OFF");
       esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
       prev_enb = enb;
   }

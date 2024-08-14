@@ -170,3 +170,12 @@ bool button_get_button_state(button_id_t const button_id)
     }
     return false;
 }
+
+bool button_get_button_state(button_id_t button_id)
+{
+    bool state = false;
+    if (buttons[button_id].gpio != GPIO_NUM_NC) {
+        state = buttons[button_id].enabled;
+    }
+    return state;
+}
