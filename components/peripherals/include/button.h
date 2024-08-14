@@ -67,4 +67,11 @@ void button_set_button_state(button_id_t button_id, bool enabled);
  */
 bool button_get_button_state(button_id_t button_id);
 
+/**
+ *
+ * @param button_id id of button
+ * @return button state
+
+ */
+bool button_get_button_state(button_id_t button_id);
 #endif /* BUTTON_H_ */
