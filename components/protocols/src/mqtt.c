@@ -989,15 +989,6 @@ static void mqtt_publish_evse_switch_data(esp_mqtt_client_handle_t client, bool 
       prev_pol = pol;
   }
 
-  // Button state
-  static bool prev_enb = 0;
-  bool const enb = (button_get_button_state(BUTTON_ID_EVSE_ENABLE)
-                    || button_get_button_state(BUTTON_ID_AUX1));
-  if (force || (enb != prev_enb)) {
-      sprintf(topic, "%s/enb", mqtt_main_topic);
-      sprintf(payload, "%s", enb ? "ON": "OFF");
-      esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
-
   // Disable/enable buttos / enb
   static bool prev_enb = 0;
   bool enb = false;
@@ -1009,7 +1000,7 @@ static void mqtt_publish_evse_switch_data(esp_mqtt_client_handle_t client, bool 
   }
   if (force || (enb != prev_enb)) {
       sprintf(topic, "%s/enb", mqtt_main_topic);
-      sprintf(payload, "%s", enb? "ON": "OFF");
+      sprintf(payload, "%s", enb ? "ON": "OFF");
       esp_mqtt_client_publish(client, topic, payload, 0, /*qos*/0, /*retain*/0);
       prev_enb = enb;
   }
