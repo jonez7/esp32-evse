@@ -230,13 +230,13 @@ socket_lock_status_t socket_lock_get_status(void)
 const char* socket_lock_status_to_str(socket_lock_status_t status)
 {
     switch (status) {
-        case SOCKED_LOCK_STATUS_IDLE:
+        case SOCKET_LOCK_STATUS_IDLE:
             return "Idle";
-        case SOCKED_LOCK_STATUS_OPERATING:
+        case SOCKET_LOCK_STATUS_OPERATING:
             return "Operating";
-        case SOCKED_LOCK_STATUS_LOCKING_FAIL:
+        case SOCKET_LOCK_STATUS_LOCKING_FAIL:
             return "Locking failed";
-        case SOCKED_LOCK_STATUS_UNLOCKING_FAIL:
+        case SOCKET_LOCK_STATUS_UNLOCKING_FAIL:
             return "Unlocking failed";
         default: return NULL;
     }
