@@ -1,22 +1,21 @@
 #include "temp_sensor.h"
 
 #include <driver/gpio.h>
+#include <esp_adc/adc_oneshot.h>
 #include <esp_log.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
-#include <sys/param.h>
-#include <string.h>
-#include <esp_adc/adc_oneshot.h>
+#include <math.h>
 #include <rom/ets_sys.h>
+#include <string.h>
+#include <sys/param.h>
 
+#include "adc.h"
 #include "board_config.h"
 #include "ds18x20.h"
-#include "adc.h"
-
-#include <math.h>
 
 #define MAX_SENSORS           5
-#define MEASURE_PERIOD        10000   //10s
+#define MEASURE_PERIOD        10000  // 10s
 #define MEASURE_ERR_THRESHOLD 3
 #define ADC_MAX               ((1 << 13) - 1)
 
@@ -35,6 +34,13 @@ static int16_t high_temp = 0;
 static uint8_t measure_err_count = 0;
 
 static adc_oneshot_unit_handle_t m_handle;
+
+#if CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3
+#include "driver/temperature_sensor.h"
+
+static temperature_sensor_handle_t temp_handle = NULL;
+static temperature_sensor_config_t temp_sensor_config = TEMPERATURE_SENSOR_CONFIG_DEFAULT(20, 50);
+#endif
 
 bool thermistor_init(void)
 {
@@ -66,7 +72,7 @@ bool thermistor_init(void)
 static void thermistor_task_func(void* param)
 {
 #define Kelvin 273.15
-    const float R1   = board_config.thermistor_r1;
+    const float R1 = board_config.thermistor_r1;
     const float Beta = board_config.thermistor_beta;
     const float NTC_R = board_config.thermistor_nominal_r;
     const float NTC_C = (Kelvin + 25.0);
@@ -81,9 +87,9 @@ static void thermistor_task_func(void* param)
         }
         adc /= 8;
 
-        float Rt =  R1 * (((float)ADC_MAX / adc) - 1);
+        float Rt = R1 * (((float)ADC_MAX / adc) - 1);
         float K = (Beta * NTC_C) / (Beta + (NTC_C * logf(Rt / NTC_R)));
-        float C = K - Kelvin;               // convert to Celsius
+        float C = K - Kelvin;  // convert to Celsius
         low_temp = high_temp = (int16_t)(C * 100);
 
         vTaskDelay(pdMS_TO_TICKS(MEASURE_PERIOD));
@@ -139,6 +145,9 @@ void temp_sensor_init(void)
             sensor_count = 1;
         }
     }
+#if CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3
+    ESP_ERROR_CHECK(temperature_sensor_install(&temp_sensor_config, &temp_handle));
+#endif
 }
 
 uint8_t temp_sensor_get_count(void)
@@ -169,8 +178,23 @@ bool temp_sensor_is_error(void)
 }
 
 // CPU Temp
-extern  uint8_t temprature_sens_read();
+#if CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3
+float temp_sensor_read_cpu_temperature(void)
+{
+    // Enable temperature sensor
+    if (ESP_OK != temperature_sensor_enable(temp_handle)) return -99;
+    // Get converted sensor data
+    float tsens_out;
+    if (ESP_OK != temperature_sensor_get_celsius(temp_handle, &tsens_out)) return -99;
+    // Disable the temperature sensor if it is not needed and save the power
+    temperature_sensor_disable(temp_handle);
+    return tsens_out;
+}
+#else
+extern uint8_t temprature_sens_read();
+
 float temp_sensor_read_cpu_temperature(void)
 {
     return (temprature_sens_read() - 32) / 1.8;
 }
+#endif

@@ -13,24 +13,24 @@
 
 #include "sdkconfig.h"
 
+#include "addressable_led.h"
 #include "board_config.h"
 #include "button.h"
 #include "evse.h"
 #include "led.h"
 #include "logger.h"
 #include "modbus.h"
+#include "mqtt.h"
 #include "peripherals.h"
+#include "power_outlet.h"
 #include "protocols.h"
 #include "script.h"
 #include "serial.h"
-#include "wifi.h"
-#include "mqtt.h"
-#include "addressable_led.h"
-#include "power_outlet.h"
 #include "tesla_button.h"
+#include "wifi.h"
 
-#define AP_CONNECTION_TIMEOUT 60000 // 60sec
-#define RESET_HOLD_TIME       5000  // 5sec
+#define AP_CONNECTION_TIMEOUT 60000  // 60sec
+#define RESET_HOLD_TIME       5000   // 5sec
 
 static const char* TAG = "app_main";
 
@@ -102,7 +102,7 @@ void evse_enable_button_press_handler(TickType_t press_time)
 {
     static TickType_t prev_toggle_time = 0;
     // Previous togle needs to be second ago
-    if ( press_time - prev_toggle_time > pdMS_TO_TICKS(1000)) {
+    if (press_time - prev_toggle_time > pdMS_TO_TICKS(1000)) {
         ESP_LOGD(TAG, "EVSE_ENABLE: state=%d", evse_is_enabled());
         evse_set_enabled(!evse_is_enabled());
         prev_toggle_time = press_time;
@@ -113,7 +113,7 @@ void set_button_callbacks(void)
 {
     button_set_handler(BUTTON_ID_WIFI, wifi_button_release_handler, BUTTON_HANDLER_RELEASED);
     if (board_config.button_evse_enable) {
-        button_set_handler(BUTTON_ID_EVSE_ENABLE,  evse_enable_button_press_handler, BUTTON_HANDLER_BOTH);
+        button_set_handler(BUTTON_ID_EVSE_ENABLE, evse_enable_button_press_handler, BUTTON_HANDLER_BOTH);
     }
 }
 
@@ -156,10 +156,10 @@ static bool ota_diagnostic(void)
     return true;
 }
 
-#define ADDRESSABLE_LED_READY           0,128,0
-#define ADDRESSABLE_LED_EV_CONNECTED    128,90,0
-#define ADDRESSABLE_LED_CHARGING        0,0,128
-#define ADDRESSABLE_LED_ERROR           128,0,0
+#define ADDRESSABLE_LED_READY        0, 128, 0
+#define ADDRESSABLE_LED_EV_CONNECTED 128, 90, 0
+#define ADDRESSABLE_LED_CHARGING     0, 0, 128
+#define ADDRESSABLE_LED_ERROR        128, 0, 0
 
 static void update_leds(void)
 {
@@ -171,8 +171,7 @@ static void update_leds(void)
         case EVSE_STATE_A:
             if (evse_enabled && !board_config.led_error) {
                 led_set_on(LED_ID_CHARGING);
-            }
-            else {
+            } else {
                 led_set_off(LED_ID_CHARGING);
             }
             led_set_off(LED_ID_ERROR);
@@ -198,9 +197,8 @@ static void update_leds(void)
             break;
         case EVSE_STATE_E:
             if (evse_enabled && !board_config.led_error) {
-                led_set_state(LED_ID_CHARGING,100,100);
-            }
-            else {
+                led_set_state(LED_ID_CHARGING, 100, 100);
+            } else {
                 led_set_off(LED_ID_CHARGING);
             }
             led_set_on(LED_ID_ERROR);

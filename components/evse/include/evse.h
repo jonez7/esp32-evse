@@ -85,9 +85,9 @@ const char *evse_state_to_str(evse_state_t state);
 
 /**
  * @brief Format to string value and decsribtion
- * 
- * @param state 
- * @return const char 
+ *
+ * @param state
+ * @return const char
  */
 const char *evse_state_to_str_long(evse_state_t state);
 
@@ -103,7 +103,7 @@ uint32_t evse_get_error(void);
  *
  * @return char*
  */
-const char* evse_error_to_str(uint32_t error);
+const char *evse_error_to_str(uint32_t error);
 
 /**
  * @brief Get max charging current, stored in NVS
