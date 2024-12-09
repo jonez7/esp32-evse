@@ -99,22 +99,17 @@
       <li>Connect the EVSE board to your computer using USB or serial-to-USB adapter</li>
       <li>Select suitable firmware for your board</li>
       <li>Press <strong>Connect</strong> button and select corret serial port</li>
-      <li>Confirm install in dialog, some boards must be manualy switched to flashing mode by holding WiFi buton while
-        reset (ESP32-S2 EVSE DIY ALPHA)</li>
-      <li>After install, press WiFi (Boot on devkit) button on board and connect to WiFi evse-XXXXXX, then open url http://192.168.4.1
-      </li>
+      <li>Confirm install in dialog, some boards must be manualy switched to flashing mode by holding WiFi buton while reset</li>
+      <li>After install, press WiFi (Boot on devkit) button on board and connect to WiFi evse-XXXXXX, then open url http://192.168.4.1</li>
     </ol>
 
     <p>Select firmware:</p>
     <ul class="radios">
       <li>
-        <label><input type="radio" name="type" value="minimal" />ESP32/S2/S3 with minimal config</label>
+        <label><input type="radio" name="type" value="handle" />OULWare handle</label>
       </li>
       <li>
-        <label><input type="radio" name="type" value="esp32devkitc" />ESP32DevkitC EVSE</label>
-      </li>
-      <li>
-        <label><input type="radio" name="type" value="esp32s2da" />ESP32-S2 EVSE DIY ALPHA</label>
+        <label><input type="radio" name="type" value="wallbox" />OULWare wallbox</label>
       </li>
     </ul>
     <p class="button-row" align="center">
