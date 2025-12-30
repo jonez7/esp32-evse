@@ -76,6 +76,7 @@ void led_set_state(led_id_t led_id, uint16_t ontime, uint16_t offtime)
     if (led->gpio != GPIO_NUM_NC) {
         if (led->timer != NULL) {
             xTimerStop(led->timer, BLOCK_TIME);
+            xTimerDelete(led->timer, BLOCK_TIME);
             led->timer = NULL;
         }
 
