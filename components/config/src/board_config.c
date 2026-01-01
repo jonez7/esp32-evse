@@ -86,12 +86,16 @@ void board_config_load()
                     SET_CONFIG_VALUE_STR("DEVICE_NAME", device_name);
                     SET_CONFIG_VALUE("LED_CHARGING", led_charging, atob);
                     SET_CONFIG_VALUE("LED_CHARGING_GPIO", led_charging_gpio, atoi);
+                    SET_CONFIG_VALUE("LED_CHARGING_CONTROL_INVERTED", led_charging_control_inverted, atob);
                     SET_CONFIG_VALUE("LED_ERROR", led_error, atob);
                     SET_CONFIG_VALUE("LED_ERROR_GPIO", led_error_gpio, atoi);
+                    SET_CONFIG_VALUE("LED_ERROR_CONTROL_INVERTED", led_error_control_inverted, atob);
                     SET_CONFIG_VALUE("LED_WIFI", led_wifi, atob);
                     SET_CONFIG_VALUE("LED_WIFI_GPIO", led_wifi_gpio, atoi);
+                    SET_CONFIG_VALUE("LED_WIFI_CONTROL_INVERTED", led_wifi_control_inverted, atob);
                     SET_CONFIG_VALUE("LED_AUX1", led_aux1, atob);
                     SET_CONFIG_VALUE("LED_AUX1_GPIO", led_aux1_gpio, atoi);
+                    SET_CONFIG_VALUE("LED_AUX1_CONTROL_INVERTED", led_aux1_control_inverted, atob);
                     SET_CONFIG_VALUE("BUTTON_WIFI_GPIO", button_wifi_gpio, atoi);
                     SET_CONFIG_VALUE("BUTTON_EVSE_ENABLE", button_evse_enable, atob);
                     SET_CONFIG_VALUE("BUTTON_EVSE_ENABLE_GPIO", button_evse_enable_gpio, atoi);
@@ -99,6 +103,8 @@ void board_config_load()
                     SET_CONFIG_VALUE("BUTTON_AUX1_GPIO", button_aux1_gpio, atoi);
                     SET_CONFIG_VALUE("BUTTON_AUX2", button_aux2, atob);
                     SET_CONFIG_VALUE("BUTTON_AUX2_GPIO", button_aux2_gpio, atoi);
+                    SET_CONFIG_VALUE("BUTTON_TESLA", button_tesla, atob);
+                    SET_CONFIG_VALUE("BUTTON_TESLA_GPIO", button_tesla_gpio, atoi);
                     SET_CONFIG_VALUE("PILOT_PWM_GPIO", pilot_pwm_gpio, atoi);
                     SET_CONFIG_VALUE("PILOT_ADC_CHANNEL", pilot_adc_channel, atoi);
                     SET_CONFIG_VALUE("PILOT_DOWN_THRESHOLD_12", pilot_down_threshold_12, atoi);

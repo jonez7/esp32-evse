@@ -24,12 +24,16 @@ typedef struct
 
     bool led_charging : 1;
     gpio_num_t led_charging_gpio;
+    bool led_charging_control_inverted : 1;
     bool led_error : 1;
     gpio_num_t led_error_gpio;
+    bool led_error_control_inverted : 1;
     bool led_wifi : 1;
     gpio_num_t led_wifi_gpio;
+    bool led_wifi_control_inverted : 1;
     bool led_aux1 : 1;
     gpio_num_t led_aux1_gpio;
+    bool led_aux1_control_inverted : 1;
 
     gpio_num_t button_wifi_gpio;
     bool button_evse_enable : 1;
@@ -38,6 +42,8 @@ typedef struct
     gpio_num_t button_aux1_gpio;
     bool button_aux2 : 1;
     gpio_num_t button_aux2_gpio;
+    bool button_tesla : 1;
+    gpio_num_t button_tesla_gpio;
 
     gpio_num_t pilot_pwm_gpio;
     adc_channel_t pilot_adc_channel;

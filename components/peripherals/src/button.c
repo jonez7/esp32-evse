@@ -126,6 +126,11 @@ void button_init(void)
         buttons[BUTTON_ID_AUX2].gpio = board_config.button_aux2_gpio;
         io_conf.pin_bit_mask |= BIT64(board_config.button_aux2_gpio);
     }
+        
+    if (board_config.button_tesla) {
+        buttons[BUTTON_ID_TESLA].gpio = board_config.button_tesla_gpio;
+        io_conf.pin_bit_mask |= BIT64(board_config.button_tesla_gpio);
+    }
 
     ESP_ERROR_CHECK(gpio_config(&io_conf));
 
