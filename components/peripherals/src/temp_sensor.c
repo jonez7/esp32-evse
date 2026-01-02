@@ -168,8 +168,12 @@ bool temp_sensor_is_error(void)
 }
 
 // CPU Temp
-extern  uint8_t temprature_sens_read();
 float temp_sensor_read_cpu_temperature(void)
 {
-    return (temprature_sens_read() - 32) / 1.8;
+#if CONFIG_IDF_TARGET_ESP32
+    extern uint8_t temprature_sens_read(void);
+    return (float)(temprature_sens_read() - 32) / 1.8f;
+#else
+    return 0.0f;
+#endif
 }
